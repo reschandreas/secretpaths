@@ -3,7 +3,7 @@ module secretpath
 go 1.22
 
 require (
-	github.com/hashicorp/hcl/v2 v2.20.1
+	github.com/hashicorp/hcl/v2 v2.21.0
 	github.com/hashicorp/vault-client-go v0.4.3
 	github.com/tjarratt/babble v0.0.0-20210505082055-cbca2a4833c1
 )
