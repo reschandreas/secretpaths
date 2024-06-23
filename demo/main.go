@@ -7,8 +7,8 @@ import (
 	"github.com/tjarratt/babble"
 	"log"
 	"math/rand"
-	"secretpath/backend"
-	"secretpath/models"
+	"secretpaths/backend"
+	"secretpaths/models"
 )
 
 func getRandomPath() string {
@@ -62,7 +62,7 @@ func writePolicy(ctx context.Context, client *vault.Client, name string, paths [
 }
 
 // Creates a bunch of secrets and policies in Vault to be used in the demo
-// The secrets are created with random paths, keys and values
+// The secrets are created with random paths, keys, and values
 func main() {
 	ctx := context.Background()
 

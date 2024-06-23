@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	"secretpath/backend"
+	"secretpaths/backend"
 )
 
 func main() {

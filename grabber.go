@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/vault-client-go"
 	"log"
-	"secretpath/models"
+	"secretpaths/models"
 )
 
 func getPolicies(ctx context.Context, client *vault.Client) ([]models.Policy, error) {

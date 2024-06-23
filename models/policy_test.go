@@ -1,7 +1,7 @@
 package models_test
 
 import (
-	"secretpath/models"
+	"secretpaths/models"
 	"strings"
 	"testing"
 )

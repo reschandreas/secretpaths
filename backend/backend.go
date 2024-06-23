@@ -16,8 +16,6 @@ func SetupClient(token string) *vault.Client {
 		serverAddress = val
 	}
 
-	os.Getenv("VAULT_ADDR")
-
 	client, err := vault.New(
 		vault.WithAddress(serverAddress),
 		vault.WithRequestTimeout(30*time.Second),

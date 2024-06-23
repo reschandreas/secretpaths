@@ -111,8 +111,9 @@ func FromHCL(name string, hcl []byte) (policy Policy, err error) {
 }
 
 func PathToRegex(path string) string {
-	regex := strings.Replace(path, "+", "[^/]+", -1)
-	regex = strings.Replace(regex, "*", ".*", -1)
+	regex := strings.ReplaceAll(path, "+", "[^/]+")
+	// * is only allowed once and at the end of the path
+	regex = strings.Replace(regex, "*", ".*", 1)
 	regex += "$"
 	return regex
 }

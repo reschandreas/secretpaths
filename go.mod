@@ -1,4 +1,4 @@
-module secretpath
+module secretpaths
 
 go 1.22
 
