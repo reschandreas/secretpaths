@@ -48,7 +48,7 @@ func writePolicy(ctx context.Context, client *vault.Client, name string, paths [
 	capabilities := []string{"read", "list"}
 	rules := []models.Rule{}
 	for _, path := range paths {
-		rules = append(rules, models.Rule{Path: path, Capability: capabilities})
+		rules = append(rules, models.Rule{Path: path, Capabilities: capabilities})
 	}
 	policy := models.Policy{Name: name, Rules: rules}
 	request := schema.PoliciesWriteAclPolicyRequest{

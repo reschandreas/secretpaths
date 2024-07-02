@@ -2,11 +2,30 @@ package main
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"log"
+	"net/http"
 	"secretpaths/backend"
 )
 
+func getPoliciesAPI(c *gin.Context) {
+	ctx := context.Background()
+	client := backend.SetupClient("my-token")
+	policies, err := getPolicies(ctx, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.IndentedJSON(http.StatusOK, policies)
+}
+
 func main() {
+	router := gin.Default()
+	router.GET("/policies", getPoliciesAPI)
+
+	router.Run("localhost:8080")
+}
+
+func print_policies() {
 	ctx := context.Background()
 
 	client := backend.SetupClient("my-token")
@@ -21,7 +40,7 @@ func main() {
 		log.Printf("policy: %s has %d rules", policy.Name, policy.AmountOfPolicies())
 		if policy.AmountOfPolicies() > 0 {
 			for _, rule := range policy.Rules {
-				log.Printf("rule: %s has %s capabilities", rule.Path, rule.Capability)
+				log.Printf("rule: %s has %s capabilities", rule.Path, rule.Capabilities)
 			}
 		}
 	}

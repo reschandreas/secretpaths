@@ -8,21 +8,21 @@ import (
 )
 
 type Policy struct {
-	Name  string `hcl:"name,label"`
-	Rules []Rule `hcl:"path,block"`
+	Name  string `hcl:"name,label" json:"name"`
+	Rules []Rule `hcl:"path,block" json:"rules"`
 }
 
 type Rule struct {
-	Path       string   `hcl:"path,label"`
-	Regex      string   // helper field, makes it easier to match paths
-	Capability []string `hcl:"capabilities"`
+	Path         string   `hcl:"path,label" json:"path"`
+	Regex        string   `json:"-"` // helper field, makes it easier to match paths
+	Capabilities []string `hcl:"capabilities" json:"capabilities"`
 }
 
-func NewRule(path string, capability []string) Rule {
+func NewRule(path string, capabilities []string) Rule {
 	return Rule{
-		Path:       path,
-		Regex:      PathToRegex(path),
-		Capability: capability,
+		Path:         path,
+		Regex:        PathToRegex(path),
+		Capabilities: capabilities,
 	}
 }
 
@@ -42,7 +42,7 @@ func (p Policy) AmountOfPolicies() int {
 
 func (p Policy) ToRequest() (hcl string) {
 	for _, rule := range p.Rules {
-		hcl += "path \"" + rule.Path + "\" {\n\tcapabilities = [\"" + strings.Join(rule.Capability, "\", \"") + "\"]\n}\n\n"
+		hcl += "path \"" + rule.Path + "\" {\n\tcapabilities = [\"" + strings.Join(rule.Capabilities, "\", \"") + "\"]\n}\n\n"
 	}
 	return
 }
@@ -61,7 +61,7 @@ func (p Policy) HasAccessTo(path string) bool {
 
 func (p Policy) containsDenyCapability() bool {
 	for _, rule := range p.Rules {
-		if contains(rule.Capability, "deny") {
+		if contains(rule.Capabilities, "deny") {
 			return true
 		}
 	}
@@ -81,7 +81,7 @@ func (r Rule) SpecificallyDeniesAccessTo(path string) bool {
 	if r.Path != path {
 		return false
 	}
-	return contains(r.Capability, "deny")
+	return contains(r.Capabilities, "deny")
 }
 
 func (r Rule) HasAccessTo(path string) bool {
@@ -90,7 +90,7 @@ func (r Rule) HasAccessTo(path string) bool {
 		return false
 	}
 	if matched {
-		return !contains(r.Capability, "deny")
+		return !contains(r.Capabilities, "deny")
 	}
 	return matched
 }
