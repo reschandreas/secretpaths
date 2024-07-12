@@ -69,7 +69,7 @@ func main() {
 	numberOfSecrets := 300
 	numberOfPolicies := 30
 
-	client := backend.SetupClient("my-token")
+	client := backend.UseToken("my-token")
 
 	log.Println("Let's create some secrets")
 

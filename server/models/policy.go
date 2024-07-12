@@ -124,6 +124,7 @@ func PathToRegex(path string) string {
 // 3. If P1 has more + (wildcard) segments, P1 is lower priority
 // 4. If P1 is shorter, it is lower priority
 // 5. If P1 is smaller lexicographically, it is lower priority
+// https://developer.hashicorp.com/vault/docs/concepts/policies
 func (r Rule) IsHigherPriorityThan(other Rule) bool {
 	firstRegex := strings.IndexAny(r.Path, "*+")
 	secondRegex := strings.IndexAny(other.Path, "*+")
