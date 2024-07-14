@@ -41,7 +41,7 @@
 		{#if show}
 			<g transform={`translate(${margin},${margin})`}>
 				{#each policies as policy, i}
-					<g transition:blur|global={{duration: 500, delay: i * 100}}
+					<g transition:blur|global={{duration: 400, delay: i * 50}}
 						 transform={`translate(${root.leaves().find(d => d.data === policy)?.x},${root.leaves().find(d => d.data === policy)?.y})`}>
 						<circle fill-opacity="0.7" fill={color(name(policy))} r={root.leaves().find(d => d.data === policy)?.r}
 						/>

@@ -1,23 +1,58 @@
 <script lang="ts">
 	import * as d3 from 'd3';
-	import _ from 'lodash';
 
 	const background_color = 'white';
 
 	interface GreekGod {
 		id: string;
-		parents?: GreekGod[];
-		level?: number;
-		bundle?: any;
-		bundles?: any;
-		bundles_index?: any[];
-		links?: any;
+		parents?: string[];
+	}
+
+	interface Node {
+		id: string;
+		data: GreekGod;
+		parents: Node[];
+		level: number;
+		bundle?: Bundle;
+		bundles: Bundle[];
+		bundles_index?: Map<string, Bundle[]>;
+		links?: Link[];
 		height: number;
 		width?: number;
 		x: number;
 		y: number;
 		xt: number;
 		yt: number;
+		ys: number;
+		c1: number;
+		c2: number;
+		xb: number;
+		xs: number;
+	}
+
+	interface Bundle {
+		id: string;
+		parents: Node[];
+		level: number;
+		span: number;
+		links: Link[];
+		i: number;
+		x: number;
+		y: number;
+	}
+
+	interface Level {
+		nodes: Node[];
+		length: number;
+	}
+
+	interface Link {
+		source: Node;
+		bundle: Bundle;
+		target: Node;
+		xt: number;
+		yt: number;
+		yb: number;
 		ys: number;
 		c1: number;
 		c2: number;
@@ -119,115 +154,178 @@
 	const metro_d = 4;
 	const min_family_height = 22;
 
-	const constructTangleLayout = (levels: GreekGod[][]) => {
-		//precompute level depth
-		levels.forEach((level: GreekGod[], i: number) => {
-			level.forEach((node: GreekGod) => {
+	const addDepthInformation = (levels: Level[]) => {
+		levels.forEach((level: Level, i: number) => {
+			level.nodes.forEach((node: Node) => {
 				node.level = i;
 			});
 		});
-		var nodes = levels.reduce((a, x) => a.concat(x), []);
+	};
 
-		var nodes_index: any = {};
-		nodes.forEach((d: GreekGod) => {
-			nodes_index[d.id] = d;
+	const populateNodeMap = (nodes: Node[]) => {
+		const nodes_index: Map<string, Node> = new Map();
+		nodes.forEach((node: Node) => {
+			nodes_index.set(node.data.id, node);
 		});
+		return nodes_index;
+	};
 
-		// objectification
-		nodes.forEach((d: GreekGod) => {
-			d.parents = (d.parents === undefined ? [] : d.parents).map(
-				(p: GreekGod) => nodes_index[p]
-			);
+	const getNodes = (levels: Level[]): Node[] => {
+		const nodes: Node[] = [];
+		levels.forEach((level: Level) => {
+			nodes.push(...level.nodes);
 		});
+		return nodes;
+	};
+
+	const fix_parents = (nodes: Node[], nodes_index: Map<string, Node>) => {
+		nodes.forEach((node: Node) => {
+			let parents: Node[] = [];
+			if (node.data.parents !== undefined) {
+				node.data.parents.forEach((parent: string) => {
+					const value = nodes_index.get(parent);
+					if (value) {
+						parents.push(value);
+					}
+				});
+			}
+			node.parents = parents;
+		});
+	};
+
+	const constructTangleLayout = (levels: Level[]) => {
+		//precompute level depth
+		addDepthInformation(levels);
+		const nodes: Node[] = getNodes(levels);
+
+		const nodesMap: Map<string, Node> = populateNodeMap(nodes);
+		const bundlesMap: Map<string, Bundle> = new Map();
+
+		fix_parents(nodes, nodesMap);
 
 		// precompute bundles
-		levels.forEach((l: GreekGod[], i: number) => {
-			var index: any = {};
-			l.forEach((n: GreekGod) => {
-				if (n.parents?.length == 0) {
+		levels.forEach((level: Level, i: number) => {
+			const map: Map<string, Bundle> = new Map();
+			level.nodes.forEach((node: Node) => {
+				if (node.parents?.length == 0) {
 					return;
 				}
 
-				var id = n.parents
-					.map((d: GreekGod) => d.id)
+				const id = node.parents
+					.map((d: Node) => d.data.id)
 					.sort()
 					.join('-X-');
-				if (id in index) {
-					index[id].parents = index[id].parents.concat(n.parents);
+				const value = map.get(id);
+				if (value) {
+					value.parents = value.parents.concat(node.parents);
+					map.set(id, value);
 				} else {
-					index[id] = { id: id, parents: n.parents.slice(), level: i, span: i - d3.min(n.parents, p => p.level) };
+					const min_level = d3.min(node.parents, p => p.level);
+					if (min_level === undefined) {
+						return;
+					}
+					const bundle: Bundle = {
+						i: 0,
+						links: [],
+						x: 0,
+						y: 0,
+						id: id,
+						parents: node.parents.slice(),
+						level: i,
+						span: i - min_level
+					};
+					map.set(id, bundle);
+					bundlesMap.set(id, bundle);
 				}
-				n.bundle = index[id];
-				return n;
+				node.bundle = map.get(id);
+				return node;
 			});
 
-			l.bundles = Object.keys(index).map(k => index[k]);
-			l.bundles.forEach((b, i) => (b.i = i));
+			let ids = 0;
+			map.forEach((b: Bundle) => (b.i = ids++));
 		});
 
-		var links: any[] = [];
-		nodes.forEach((d: any) => {
-			d.parents.forEach((p: any) =>
-				links.push({ source: d, bundle: d.bundle, target: p })
-			);
+		const links: Link[] = [];
+		nodes.forEach((d: Node) => {
+			d.parents.forEach((p: Node) => {
+				if (d.bundle === undefined) {
+					return;
+				}
+				const link: Link = {
+					c1: 0,
+					c2: 0,
+					xb: 0,
+					xs: 0,
+					xt: 0,
+					yb: 0,
+					ys: 0,
+					yt: 0,
+					source: d,
+					bundle: d.bundle,
+					target: p
+				};
+				links.push(link);
+			});
 		});
-		var bundles = levels.reduce((a, x) => a.concat(x.bundles), []);
+		const bundles: Bundle[] = Array.from(bundlesMap.values());
 
 		// reverse pointer from parent to bundles
-		bundles.forEach((b: any) => {
-			if (b.parents === undefined) {
-				b.parents = [];
-			}
-			b.parents.forEach((p: any) => {
+		bundles.forEach((b: Bundle) => {
+			b.parents.forEach((p: Node) => {
 				if (p.bundles_index === undefined) {
-					p.bundles_index = {};
+					p.bundles_index = new Map<string, Bundle[]>();
 				}
-				if (!(b.id in p.bundles_index)) {
-					p.bundles_index[b.id] = [];
+				let value = p.bundles_index.get(b.id);
+				if (value === undefined) {
+					value = [];
 				}
-				p.bundles_index[b.id].push(b);
+				value.push(b);
+				p.bundles_index.set(b.id, value);
+				value.forEach((bundle: Bundle) => {
+					bundlesMap.set(bundle.id, bundle);
+				});
 			});
 		});
 
-		nodes.forEach((n: GreekGod) => {
-			if (n.bundles_index !== undefined) {
-				n.bundles = Object.keys(n.bundles_index).map(k => n.bundles_index[k]);
+		nodes.forEach((node: Node) => {
+			if (node.bundles_index !== undefined) {
+				node.bundles = Array.from(node.bundles_index.values());
 			} else {
-				n.bundles_index = {};
-				n.bundles = [];
+				node.bundles_index = new Map<string, Bundle[]>();
+				node.bundles = [];
 			}
-			n.bundles.sort((a, b) => d3.descending(d3.max(a, d => d.span), d3.max(b, d => d.span)));
-			n.bundles.forEach((b, i) => (b.i = i));
+
+			node.bundles.sort((a, b) => d3.descending(d3.max(a, d => d.span), d3.max(b, d => d.span)));
+			node.bundles.forEach((b, i) => (b.i = i));
 		});
 
-		links.forEach(l => {
-			if (l.bundle === undefined) {
+		links.forEach((link: Link) => {
+			if (link.bundle === undefined) {
 				return;
 			}
-			if (l.bundle.links === undefined) {
-				l.bundle.links = [];
+			const linkBundle: Bundle | undefined = bundlesMap.get(link.bundle.id);
+			if (linkBundle) {
+				linkBundle.links.push(link);
 			}
-			l.bundle.links.push(l);
 		});
-
 
 		options.c ||= 16;
 		const c = options.c;
 		options.bigc ||= node_width + c;
 
-		nodes.forEach(
-			(n: GreekGod) => {
-				n.height = (Math.max(1, n.bundles.length) - 1) * metro_d;
+		nodes.forEach((node: Node) => {
+				node.height = (Math.max(1, node.bundles.length) - 1) * metro_d;
 			}
 		);
 
-		var x_offset = padding;
-		var y_offset = padding;
+		let x_offset = padding;
+		let y_offset = padding;
 
-		levels.forEach(l => {
-			x_offset += l.bundles.length * bundle_width;
+		levels.forEach((level: Level) => {
+			const levelBundles: Bundle[] = bundles.filter(b => b.level === level.nodes[0].level);
+			x_offset += levelBundles.length * bundle_width;
 			y_offset += level_y_padding;
-			l.forEach((n: GreekGod) => {
+			level.nodes.forEach((n: Node) => {
 				n.x = n.level * node_width + x_offset;
 				n.y = node_height + y_offset + n.height / 2;
 
@@ -235,65 +333,79 @@
 			});
 		});
 
-		var i = 0;
-		levels.forEach(l => {
-			l.bundles.forEach(b => {
-				const max_x: number = parseInt(<string>d3.max(b.parents, d => d.x));
-				b.x =
+		let i = 0;
+		levels.forEach((level: Level) => {
+			const levelBundles: Bundle[] = bundles.filter(b => b.level === level.nodes[0].level);
+			levelBundles.forEach((bundle: Bundle) => {
+				const parent_x: number[] = bundle.parents.map(d => d.x);
+				const max_x: number = d3.max(parent_x) || 0;
+				bundle.x =
 					max_x +
 					node_width +
-					(l.bundles.length - 1 - b.i) * bundle_width;
-				b.y = i * node_height;
+					(levelBundles.length - 1 - bundle.i) * bundle_width;
+				bundle.y = i * node_height;
 			});
-			i += l.length;
+			i += level.length;
 		});
 
-		links.forEach(l => {
-			let target_x = l.target.x === undefined ? nodes_index[l.target.id].x : l.target.x;
-			if (l.target.x === undefined) {
-				target_x = 0;
+		links.forEach((link: Link) => {
+			if (link.target.bundles_index === undefined) {
+				return;
 			}
-			let target_y = l.target.y === undefined ? nodes_index[l.target.id].y : l.target.y;
-			if (l.target.y === undefined) {
-				target_y = 0;
+			const linkBundle: Bundle | undefined = bundlesMap.get(link.bundle.id);
+			if (linkBundle === undefined) {
+				return;
 			}
-			l.xt = target_x;
-			l.yt =
-				target_y +
-				l.target.bundles_index[l.bundle.id].i * metro_d -
-				(l.target.bundles.length * metro_d) / 2 +
+
+			link.xt = link.target.x;
+			link.yt =
+				link.target.y +
+				linkBundle.i * metro_d -
+				(link.target.bundles.length * metro_d) / 2 +
 				metro_d / 2;
-			l.xb = l.bundle.x;
-			l.yb = l.bundle.y;
-			l.xs = l.source.x;
-			l.ys = l.source.y;
+			link.xb = linkBundle.x;
+			link.yb = linkBundle.y;
+			link.xs = link.source.x;
+			link.ys = link.source.y;
 		});
 
 		// compress vertical space
-		var y_negative_offset = 0;
-		levels.forEach(l => {
+		let y_negative_offset = 0;
+
+		levels.forEach((level: Level) => {
+			const levelBundles: Bundle[] = bundles.filter(b => b.level === level.nodes[0].level);
+			const minimum: number = d3.min(levelBundles, bundle =>
+				d3.min(bundle.links, link => link.ys - 2 * c - (link.yt + c))
+			) || 0;
 			y_negative_offset +=
-				-min_family_height +
-				d3.min(l.bundles, b =>
-					d3.min(b.links, link => link.ys - 2 * c - (link.yt + c))
-				) || 0;
-			l.forEach((n: any) => (n.y -= y_negative_offset));
+				-min_family_height + minimum;
+			level.nodes.forEach((node: Node) => (node.y -= y_negative_offset));
 		});
 
 		// very ugly, I know
-		links.forEach(l => {
-			l.yt =
-				l.target.y +
-				l.target.bundles_index[l.bundle.id].i * metro_d -
-				(l.target.bundles.length * metro_d) / 2 +
+		links.forEach((link: Link) => {
+			if (link.target.bundles_index === undefined) {
+				return;
+			}
+			const targetBundle: Bundle[] | undefined = link.target.bundles_index.get(link.bundle.id);
+			if (targetBundle === undefined) {
+				return;
+			}
+			const c1 = link.source.level - link.target.level > 1 ? Math.min(options.bigc, link.xb - link.xt, link.yb - link.yt) - c : c;
+			link.yt =
+				link.target.y +
+				targetBundle.i * metro_d -
+				(link.target.bundles.length * metro_d) / 2 +
 				metro_d / 2;
-			l.ys = l.source.y;
-			l.c1 = l.source.level - l.target.level > 1 ? Math.min(options.bigc, l.xb - l.xt, l.yb - l.yt) - c : c;
-			l.c2 = c;
+			link.ys = link.source.y;
+			link.c1 = c1;
+			link.c2 = c;
 		});
-		var layout = {
-			width: d3.max(nodes, n => n.x) + node_width + 2 * padding,
-			height: d3.max(nodes, n => n.y) + node_height / 2 + 2 * padding,
+		const maxWidth: number = d3.max(nodes, node => node.x) || 0;
+		const maxHeight: number = d3.max(nodes, node => node.y) || 0;
+		const layout = {
+			width: maxWidth + node_width + 2 * padding,
+			height: maxHeight + node_height / 2 + 2 * padding,
 			node_height,
 			node_width,
 			bundle_width,
@@ -301,18 +413,16 @@
 			metro_d
 		};
 
-		console.log('levels', levels);
-		console.log('nodes', nodes);
-		console.log('nodes_index', nodes_index);
-		console.log('links', links);
-		console.log('bundles', bundles);
-		return { levels, nodes, nodes_index, links, bundles, layout };
+		return { levels, nodes, nodes_index: nodesMap, links, bundles, layout };
 	};
 	let color = d3.scaleOrdinal(d3.schemeDark2);
 	const renderChart = (data: any[]) => {
 		options.color ||= (d: any, i: number) => color(i);
 
-		return constructTangleLayout(_.cloneDeep(data));
+		const nodes: Node[][] = data.map((greekGods: GreekGod[]) => greekGods.map((god: GreekGod) => ({ data: god })));
+		const levels: Level[] = nodes.map((n: Node[]) => ({ nodes: n, bundles: [], length: n.length}));
+
+		return constructTangleLayout(levels);
 	};
 	$: tangleLayout = renderChart(data);
 </script>
@@ -336,34 +446,37 @@
 		</style>
 		{#each tangleLayout.bundles as b, i}
 			{#each b.links as l}
-				<path class="link"
-							d="
+				{#if !isNaN(l.c1) }
+					<path class="link"
+								d="
 							M{l.xt} {l.yt}
 							L{l.xb - l.c1} {l.yt}
 							A{l.c1} {l.c1} 90 0 1 {l.xb} {l.yt + l.c1}
 							L{l.xb} {l.ys - l.c2}
 							A{l.c2} {l.c2} 90 0 0 {l.xb + l.c2} {l.ys}
 							L{l.xs} {l.ys}"
-							stroke="{background_color}" stroke-width="5" />
-				<path class="link"
-							d="
+								stroke="{background_color}" stroke-width="5" />
+					<path class="link"
+								d="
 							M{l.xt} {l.yt}
 							L{l.xb - l.c1} {l.yt}
 							A{l.c1} {l.c1} 90 0 1 {l.xb} {l.yt + l.c1}
 							L{l.xb} {l.ys - l.c2}
 							A{l.c2} {l.c2} 90 0 0 {l.xb + l.c2} {l.ys}
 							L{l.xs} {l.ys}"
-							stroke="{options.color(b, i)}" stroke-width="2" />
+								stroke="{options.color(b, i)}" stroke-width="2" />
+				{/if}
 			{/each}
 		{/each}
 		{#each tangleLayout.nodes as n}
-			<path class="selectable node" data-id="{n.id}" stroke="black" stroke-width="8"
+			<path class="selectable node" data-id="{n.data.id}" stroke="black" stroke-width="8"
 						d="M{n.x} {n.y - n.height / 2} L{n.x} {n.y + n.height / 2}" />
 			<path class="node" stroke="white" stroke-width="4" d="M{n.x} {n.y - n.height / 2} L{n.x} {n.y + n.height / 2}" />
 
-			<text class="selectable" data-id="{n.id}" x="{n.x + 4}" y="{n.y - n.height / 2 - 4}" stroke="{background_color}"
-						stroke-width="2">{n.id}</text>
-			<text x="{n.x + 4}" y="{n.y - n.height / 2 - 4}" style="pointer-events: none;">{n.id}</text>
+			<text class="selectable" data-id="{n.data.id}" x="{n.x + 4}" y="{n.y - n.height / 2 - 4}"
+						stroke="{background_color}"
+						stroke-width="2">{n.data.id}</text>
+			<text x="{n.x + 4}" y="{n.y - n.height / 2 - 4}" style="pointer-events: none;">{n.data.id}</text>
 		{/each}
 	</svg>
 </div>
