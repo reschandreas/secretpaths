@@ -22,10 +22,10 @@
 		const stations: SubwayStation[] = [];
 		children.forEach((child) => {
 			const station: SubwayStation = {
-				id: child.name,
+				id: child.id,
 				name: child.name,
 				level: child.level,
-				parents: [entry.name]
+				parents: [entry.id]
 			};
 			stations.push(station);
 			if (child.children) {
@@ -53,6 +53,11 @@
 
 	const paths: SubwayStation[][] = withLevels;
 </script>
-<div class="m-10">
-	<SubwayChart data={paths} />
+<div class="p-5 w-full h-full">
+	<div class="container h-full w-full mx-auto flex-col justify-center">
+		<div class="flex flex-col">
+			<h2 class="h2 mt-2 font-thin">check out your secretpaths</h2>
+		</div>
+		<SubwayChart data={paths} />
+	</div>
 </div>

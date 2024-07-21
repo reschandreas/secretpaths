@@ -1,8 +1,9 @@
 <script lang="ts">
 	import * as d3 from 'd3';
-
-	const background_color = 'white';
-
+	import type { Element } from 'svelte/types/compiler/interfaces';
+	import { draw, fade } from 'svelte/transition';
+	import { onMount } from 'svelte';
+	import { ProgressBar } from '@skeletonlabs/skeleton';
 
 	interface SubwayStation {
 		id: string;
@@ -89,8 +90,11 @@
 	const level_y_padding = 16;
 	const metro_d = 4;
 	const min_family_height = 22;
+	let show = false;
 
 	const paths: Map<string, string[]> = new Map();
+	let allIds: Set<string> = new Set();
+
 	const addDepthInformation = (levels: Level[]) => {
 		levels.forEach((level: Level, i: number) => {
 			level.nodes.forEach((node: Node) => {
@@ -184,9 +188,9 @@
 
 		const links: Link[] = [];
 
-		nodes.forEach((d: Node) => {
-			d.parents.forEach((p: Node) => {
-				if (d.bundle === undefined) {
+		nodes.forEach((node: Node) => {
+			node.parents.forEach((parent: Node) => {
+				if (node.bundle === undefined) {
 					return;
 				}
 				const link: Link = {
@@ -198,14 +202,33 @@
 					y_bundle: 0,
 					y_source: 0,
 					y_target: 0,
-					source: d,
-					bundle: d.bundle,
-					target: p
+					source: node,
+					bundle: node.bundle,
+					target: parent
 				};
-				paths.set(d.data.id, d.data.parents || []);
+				const pathsToHere = paths.get(node.data.id) || [];
+				pathsToHere.push(parent.data.id);
+				paths.set(node.data.id, pathsToHere);
 				links.push(link);
 			});
 		});
+
+
+		paths.forEach((value: string[], key: string) => {
+			const newPaths: Set<string> = new Set(value);
+			value.forEach((v: string) => {
+				const pathsToParent = paths.get(v) || [];
+				pathsToParent.forEach((p: string) => newPaths.add(p));
+			});
+			paths.set(key, Array.from(newPaths));
+		});
+
+		Array.from(paths.keys()).map((k: string) => {
+			const tmp: string[] = paths.get(k) || [];
+			tmp.push(k);
+			return tmp;
+		}).flat().forEach((id: string) => allIds.add(id));
+
 		const bundles: Bundle[] = Array.from(bundlesMap.values());
 
 
@@ -238,6 +261,7 @@
 			}
 
 			node.bundles.bundles.sort((a: Bundle[], b: Bundle[]) => d3.descending(d3.max(a, d => d.span), d3.max(b, d => d.span)));
+			node.bundles.bundles.forEach((b: Bundle[], i) => (b.i = i));
 		});
 
 		links.forEach((link: Link) => {
@@ -348,7 +372,7 @@
 		return { levels, nodes, nodes_index: nodesMap, links, bundles, layout };
 	};
 	let d3Color = d3.scaleOrdinal(d3.schemeDark2);
-	const color = (d: any, i: number) => d3Color(i);
+	const color = (_: Bundle, i: number) => d3Color(i.toString());
 	const renderChart = (data: SubwayStation[][]) => {
 
 		const nodes: Node[][] = data.map((stations: SubwayStation[]) => stations.map((station: SubwayStation) => ({ data: station } as Node)));
@@ -359,124 +383,185 @@
 
 	$: tangleLayout = renderChart(data);
 
-	function handleMouseover(e: any) {
-		const id: string = e.currentTarget.id;
-		const collectedPaths = paths.get(id);
-		if (!collectedPaths) {
-			return;
+
+	onMount(() => {
+		show = true;
+	});
+
+	function getFocusedElements(id: string): HTMLCollection[] {
+		const parents: string[] | undefined = paths.get(id);
+		if (!parents) {
+			return [];
 		}
-		const parents: string[] = [];
-		parents.push(...collectedPaths);
-		collectedPaths.forEach((path: string) => {
-			const parent = paths.get(path);
-			if (parent) {
-				parent.forEach((p: string) => {
-					if (!parents.includes(p)) {
-						parents.push(p);
-					}
-				});
-			}
-		});
-		const pathsToHighlight = parents.map((p: string) => document.getElementsByClassName(p));
-		console.log('paths are', pathsToHighlight);
-		pathsToHighlight.forEach((p: HTMLCollection) => {
-			for (let i = 0; i < p.length; i++) {
-				p[i].classList.add('highlight');
-			}
-		});
-		console.log('parents are', parents);
+		parents.push(id);
+		const pathsToHighlight = parents.map((p: string) => document.getElementsByClassName('belongs-to-' + p));
+		if (!pathsToHighlight) {
+			return [];
+		}
+		return pathsToHighlight;
 	}
 
-	function handleMouseout(e: any) {
-		const id: string = e.currentTarget.id;
-		const collectedPaths = paths.get(id);
-		if (!collectedPaths) {
-			return;
+	function getOutOfFocusElements(id: string): HTMLCollection[] {
+		const hide: string[] = [];
+		const parents: string[] | undefined = paths.get(id);
+		if (!parents) {
+			return [];
 		}
-		const parents: string[] = [];
-		parents.push(...collectedPaths);
-		collectedPaths.forEach((path: string) => {
-			const parent = paths.get(path);
-			if (parent) {
-				parent.forEach((p: string) => {
-					if (!parents.includes(p)) {
-						parents.push(p);
-					}
-				});
+		parents.push(id);
+		allIds.forEach((id: string) => {
+			if (!parents.includes(id)) {
+				hide.push(id);
 			}
 		});
-		const pathsToHighlight = parents.map((p: string) => document.getElementsByClassName(p));
-		console.log('paths are', pathsToHighlight);
-		pathsToHighlight.forEach((p: HTMLCollection) => {
-			for (let i = 0; i < p.length; i++) {
-				p[i].classList.remove('highlight');
+		const pathsToHide = hide.map((p: string) => document.getElementsByClassName('belongs-to-' + p));
+		if (!pathsToHide) {
+			return [];
+		}
+		return pathsToHide;
+	}
+
+	function entryMouseOver(e: MouseEvent) {
+		if (!e.currentTarget) {
+			return;
+		}
+		const target: Element = e.currentTarget as unknown as Element;
+		const id: string = target.getAttribute('data-id');
+		getFocusedElements(id).forEach((p: HTMLCollection) => {
+			for (let element of p) {
+				if (element.tagName === 'text') {
+					continue;
+				}
+				if (element.classList.contains('outer-dot')) {
+					element.classList.add('outer-dot-highlight');
+				} else if (element.classList.contains('inner-dot')) {
+					element.classList.add('inner-dot-highlight');
+				}
+				element.classList.add('highlight');
+			}
+		});
+		getOutOfFocusElements(id).forEach((p: HTMLCollection) => {
+			for (let element of p) {
+				element.classList.add('opacity-50');
+			}
+		});
+	}
+
+	function entryMouseOut(e: MouseEvent) {
+		if (!e.currentTarget) {
+			return;
+		}
+		const target: Element = e.currentTarget as unknown as Element;
+		const id: string = target.getAttribute('data-id');
+		getFocusedElements(id).forEach((p: HTMLCollection) => {
+			for (let element of p) {
+				if (element.tagName === 'text') {
+					continue;
+				}
+				if (element.classList.contains('outer-dot')) {
+					element.classList.remove('outer-dot-highlight');
+				} else if (element.classList.contains('inner-dot')) {
+					element.classList.remove('inner-dot-highlight');
+				}
+				element.classList.remove('highlight');
+			}
+		});
+		getOutOfFocusElements(id).forEach((p: HTMLCollection) => {
+			for (let element of p) {
+				element.classList.remove('opacity-50');
 			}
 		});
 	}
 
 </script>
 
-<div class="content-center overflow-auto">
-	<svg width="{tangleLayout.layout.width}" height="{
-			tangleLayout.layout.height
-		}" style="background-color: {background_color}">
-		<style>
-        text {
-            font-family: "Roboto Thin", sans-serif;
-            font-size: 15px;
-        }
+{#if show}
+	<div class="container hide-scrollbar content-center overflow-auto">
+		<svg width="{tangleLayout.layout.width}" height="{
+			tangleLayout.layout.height}">
+			<style>
 
-        .node {
-            stroke-linecap: round;
-        }
+          text {
+              font-family: "Roboto Mono Thin", sans-serif;
+							font-weight: lighter;
+              font-size: 15px;
+          }
+          .node {
+              stroke-linecap: round;
+          }
 
-        .link {
-            fill: none;
+          .highlight {
+              stroke-width: 7px;
+          }
 
-        }
+					.inner-dot-highlight {
+							stroke-width: 7px;
+					}
 
-				.unhighlight {
-						stroke-width: 2px;
-				}
-
-        .highlight {
-						stroke: green;
-            stroke-width: 10px;
-        }
-		</style>
-		{#each tangleLayout.bundles as b, i}
-			{#each b.links as l}
-				{#if !isNaN(l.c1) }
-					<path class="link {l.bundle.id}"
-								d="
-							M{l.x_target} {l.y_target}
-							L{l.x_bundle - l.c1} {l.y_target}
-							A{l.c1} {l.c1} 90 0 1 {l.x_bundle} {l.y_target + l.c1}
-							L{l.x_bundle} {l.y_source - l.c2}
-							A{l.c2} {l.c2} 90 0 0 {l.x_bundle + l.c2} {l.y_source}
-							L{l.x_source} {l.y_source}"
-								stroke="{background_color}" stroke-width="5" />
-					<path class="link"
-								d="
-							M{l.x_target} {l.y_target}
-							L{l.x_bundle - l.c1} {l.y_target}
-							A{l.c1} {l.c1} 90 0 1 {l.x_bundle} {l.y_target + l.c1}
-							L{l.x_bundle} {l.y_source - l.c2}
-							A{l.c2} {l.c2} 90 0 0 {l.x_bundle + l.c2} {l.y_source}
-							L{l.x_source} {l.y_source}"
-								stroke="{color(b, i)}" stroke-width="2" />
-				{/if}
+					.outer-dot-highlight {
+							stroke-width: 15px;
+					}
+			</style>
+			{#each tangleLayout.bundles as b, i}
+				{#each b.links as link}
+					{#if !isNaN(link.c1) }
+						<path
+							class="fill-none belongs-to-{link.source.data.id} stroke-gray dark:stroke-black"
+							transition:draw|global={{duration: 500, delay: i * 100}}
+							d="
+							M{link.x_target} {link.y_target}
+							L{link.x_bundle - link.c1} {link.y_target}
+							A{link.c1} {link.c1} 90 0 1 {link.x_bundle} {link.y_target + link.c1}
+							L{link.x_bundle} {link.y_source - link.c2}
+							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
+							L{link.x_source} {link.y_source}"
+							stroke-width="5"/>
+						<path
+							class="fill-none belongs-to-{link.source.data.id} stroke-2"
+							transition:draw|global={{duration: 500, delay: i * 100}}
+							d="
+							M{link.x_target} {link.y_target}
+							L{link.x_bundle - link.c1} {link.y_target}
+							A{link.c1} {link.c1} 90 0 1 {link.x_bundle} {link.y_target + link.c1}
+							L{link.x_bundle} {link.y_source - link.c2}
+							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
+							L{link.x_source} {link.y_source}"
+							stroke="{color(b, i)}"/>
+					{/if}
+				{/each}
 			{/each}
-		{/each}
-		{#each tangleLayout.nodes as n}
-			<path class="selectable node" data-id="{n.data.id}" stroke="black" stroke-width="8"
-						d="M{n.x} {n.y - n.height / 2} L{n.x} {n.y + n.height / 2}" />
-			<path class="node" stroke="white" stroke-width="4" d="M{n.x} {n.y - n.height / 2} L{n.x} {n.y + n.height / 2}" />
+			{#each tangleLayout.nodes as node, i}
+				<!-- little dot-->
+				<path
+					class="selectable node outer-dot belongs-to-{node.data.id} stroke-black dark:stroke-white"
+					data-id="{node.data.id}"
+					stroke-width="10"
+					transition:fade|global={{duration: 200, delay: i * 5}}
+					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}" />
+				<!-- inner circle -->
+				<path
+					transition:fade|global={{duration: 200, delay: i * 5.1}}
+					class="node inner-dot belongs-to-{node.data.id} stroke-white dark:stroke-black"
+					stroke-width="6"
+					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}" />
 
-			<text class="selectable" data-id="{n.data.id}" x="{n.x}" y="{n.y - n.height / 2 - 8}"
-						stroke-width="2" id="{n.data.id}"
-						on:mouseover|preventDefault={handleMouseover} on:mouseout|preventDefault={handleMouseout}>{n.data.name}</text>
-<!--			<text x="{n.x + 4}" y="{n.y - n.height / 2 - 4}" style="pointer-events: none;">{n.data.name}</text>-->
-		{/each}
-	</svg>
-</div>
+				<text
+					class="font-thin dark:font-white stroke-black dark:stroke-white belongs-to-{node.data.id}"
+					data-id="{node.data.id}"
+					transition:fade|global={{duration: 400, delay: i * 50}}
+					x="{node.x}"
+					role="term"
+					y="{node.y - node.height / 2 - 8}"
+					on:mouseover|preventDefault={entryMouseOver}
+					on:mouseout|preventDefault={entryMouseOut}
+					on:focus|preventDefault={() => {}}
+					on:blur|preventDefault={() => {}}>
+					{node.data.name}
+				</text>
+			{/each}
+		</svg>
+	</div>
+{:else}
+	<div class="container justify-center items-center h-full mx-auto flex">
+		<ProgressBar class="w-1/2 content-center"/>
+	</div>
+{/if}

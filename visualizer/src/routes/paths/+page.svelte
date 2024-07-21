@@ -24,7 +24,7 @@
 </script>
 <div class="container h-full w-full mx-auto flex-col justify-center">
 	<div class="flex flex-col">
-		<h2 class="h2 mt-2">Find your paths...</h2>
+		<h2 class="h2 mt-2 font-thin">search through your paths</h2>
 		<input
 			class="input autocomplete mt-4 mb-4 border-none min-w-full"
 			type="search"
