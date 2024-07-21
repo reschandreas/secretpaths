@@ -16,3 +16,11 @@ export interface AnalyzedSecret {
 	path: Path;
 	policies: Policy[];
 }
+
+export interface GraphEntry {
+	path: string,
+	id: string,
+	name: string,
+	level: number,
+	children: GraphEntry[]
+}

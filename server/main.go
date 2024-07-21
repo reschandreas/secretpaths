@@ -32,6 +32,17 @@ func getPathsAPI(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, paths)
 }
 
+func getGraphApi(c *gin.Context) {
+	ctx := context.Background()
+	client := backend.UseAppRole(ctx)
+	paths, err := getGraphPaths(ctx, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.IndentedJSON(http.StatusOK, paths)
+}
+
 func getAnalyzedSecretsAPI(c *gin.Context) {
 	ctx := context.Background()
 	client := backend.UseAppRole(ctx)
@@ -66,6 +77,7 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	router.GET("/paths", getPathsAPI)
+	router.GET("/graph", getGraphApi)
 	router.GET("/policies", getPoliciesAPI)
 	router.GET("/analyzedSecrets", getAnalyzedSecretsAPI)
 

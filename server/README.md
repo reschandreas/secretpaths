@@ -2,6 +2,7 @@
 
 To be able to read all paths and policies, we need the following policy:
 ```bash
+
 vault policy write secretpaths - <<EOF
 # allow read access to all policies
 path "sys/policies/acl/*" {

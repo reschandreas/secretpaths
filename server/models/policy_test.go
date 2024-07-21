@@ -13,8 +13,8 @@ func TestPolicy_ToRequest(t *testing.T) {
 		Name: "policy_testing",
 		Rules: []models.Rule{
 			{
-				Path:       "secret/foo",
-				Capability: []string{"read"},
+				Path:         "secret/foo",
+				Capabilities: []string{"read"},
 			},
 		},
 	}
@@ -34,14 +34,14 @@ func TestPolicy_FromHCL(t *testing.T) {
 	if policy.AmountOfPolicies() != 1 {
 		t.Errorf("expected: %d, got: %d", 1, policy.AmountOfPolicies())
 	}
-	if len(policy.Rules[0].Capability) != 1 {
-		t.Errorf("expected: %d, got: %d", 1, len(policy.Rules[0].Capability))
+	if len(policy.Rules[0].Capabilities) != 1 {
+		t.Errorf("expected: %d, got: %d", 1, len(policy.Rules[0].Capabilities))
 	}
 	if policy.Rules[0].Path != "secret/foo" {
 		t.Errorf("expected: %s, got: %s", "secret/foo", policy.Rules[0].Path)
 	}
-	if policy.Rules[0].Capability[0] != "read" {
-		t.Errorf("expected: %s, got: %s", "read", policy.Rules[0].Capability[0])
+	if policy.Rules[0].Capabilities[0] != "read" {
+		t.Errorf("expected: %s, got: %s", "read", policy.Rules[0].Capabilities[0])
 	}
 }
 
