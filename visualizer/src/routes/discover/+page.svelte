@@ -12,7 +12,7 @@
 
 	async function loadInformation() {
 		try {
-			const res = await fetch(`/info`);
+			const res = await fetch(`/v1/info`);
 			information = await res.json();
 		} catch (err) {
 			console.error(err);

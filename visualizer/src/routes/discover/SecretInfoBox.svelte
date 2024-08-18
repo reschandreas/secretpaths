@@ -14,7 +14,7 @@
 
 	async function loadPolicies() {
 		try {
-			const res = await fetch(`/analyzed?path=${secret}`);
+			const res = await fetch(`/v1/analyzed?path=${secret}`);
 			policies = await res.json();
 		} catch (err) {
 			console.error(err);
