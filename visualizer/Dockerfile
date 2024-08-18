@@ -17,8 +17,8 @@ WORKDIR /app
 
 COPY --chown=1000:1000 --from=build /app/build /app/package.json ./
 
-EXPOSE 8080
+EXPOSE 8081
 
-ENV HOST=0.0.0.0 PORT=8080 NODE_ENV=production
+ENV HOST=0.0.0.0 PORT=8081 NODE_ENV=production
 
 CMD ["dumb-init","node","index.js"]

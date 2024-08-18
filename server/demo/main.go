@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"secretpaths/backend"
 	"secretpaths/models"
+	"time"
 )
 
 func getRandomPath() string {
@@ -57,7 +58,7 @@ func writePolicy(ctx context.Context, client *vault.Client, name string, paths [
 	println(policy.ToRequest())
 	_, err := client.System.PoliciesWriteAclPolicy(ctx, policy.Name, request)
 	if err != nil {
-		log.Fatal(err)
+		log.Default().Println("error writing policy", name)
 	}
 }
 
@@ -85,7 +86,8 @@ func main() {
 		paths = append(paths, path)
 	}
 
-	log.Println("Let's create a policy")
+	log.Println("Let's create policies")
+	time.Sleep(2 * time.Second)
 	for i := 0; i < numberOfPolicies; i++ {
 		name := "policy_" + getRandomKey()
 		start := rand.Intn(len(paths))
