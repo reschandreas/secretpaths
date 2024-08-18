@@ -24,8 +24,8 @@ vault write auth/approle/role/secretpaths \
 ```
 
 ```bash
-vault read auth/approle/role/secretpaths/role-id
-vault write -f auth/approle/role/secretpaths/secret-id
+export APPROLE_ROLE_ID=$(vault read --field=data auth/approle/role/secretpaths/role-id --format=json | jq '.role_id' -r)
+export APPROLE_SECRET_ID=$(vault write --field=data -f auth/approle/role/secretpaths/secret-id --format=json | jq '.secret_id' -r)
 ```
 
 ```bash

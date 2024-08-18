@@ -8,6 +8,8 @@ RUN go mod download
 
 COPY . ./
 
+RUN rm -rf demo/
+
 ENV CGO_ENABLED=0 \
     GOOS=linux
 

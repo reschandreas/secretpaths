@@ -19,7 +19,10 @@ func getPolicies(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, policies)
 	} else {
 		ctx := context.Background()
-		client := backend.UseAppRole(ctx)
+		client, err := backend.AutoAuth(ctx)
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
 		policies, err := GetPolicies(ctx, client)
 		if err != nil {
 			log.Fatal(err)
@@ -42,7 +45,10 @@ func getPaths(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, paths)
 	} else {
 		ctx := context.Background()
-		client := backend.UseAppRole(ctx)
+		client, err := backend.AutoAuth(ctx)
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
 		paths, err := GetPaths(ctx, client)
 		if err != nil {
 			log.Fatal(err)
@@ -59,7 +65,10 @@ func getGraph(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, paths)
 	} else {
 		ctx := context.Background()
-		client := backend.UseAppRole(ctx)
+		client, err := backend.AutoAuth(ctx)
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
 		paths, err := getGraphPaths(ctx, client)
 		if err != nil {
 			log.Fatal(err)
@@ -88,7 +97,10 @@ func getAnalyzedSecret(c *gin.Context) {
 }
 
 func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnalyzedSecret, error) {
-	client := backend.UseAppRole(ctx)
+	client, err := backend.AutoAuth(ctx)
+	if err != nil {
+		log.Printf("error: %v", err)
+	}
 	paths, err := GetPaths(ctx, client)
 	if err != nil {
 		log.Fatal(err)

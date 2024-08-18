@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/vault-client-go"
 	"github.com/hashicorp/vault-client-go/schema"
 	"log"
@@ -28,6 +29,19 @@ func SetupConnection() *vault.Client {
 	return client
 }
 
+func AutoAuth(ctx context.Context) (*vault.Client, error) {
+	if os.Getenv("KUBERNETES_ROLE") != "" {
+		return UseKubernetes(ctx), nil
+	}
+	if os.Getenv("APPROLE_ROLE_ID") != "" && os.Getenv("APPROLE_SECRET_ID") != "" {
+		return useAppRole(ctx), nil
+	}
+	if os.Getenv("VAULT_TOKEN") != "" {
+		return UseToken(os.Getenv("VAULT_TOKEN")), nil
+	}
+	return nil, fmt.Errorf("no authentication method found")
+}
+
 func UseToken(token string) *vault.Client {
 	client := SetupConnection()
 
@@ -37,7 +51,7 @@ func UseToken(token string) *vault.Client {
 	return client
 }
 
-func UseAppRole(ctx context.Context) *vault.Client {
+func useAppRole(ctx context.Context) *vault.Client {
 	client := SetupConnection()
 
 	resp, err := client.Auth.AppRoleLogin(
@@ -45,6 +59,25 @@ func UseAppRole(ctx context.Context) *vault.Client {
 		schema.AppRoleLoginRequest{
 			RoleId:   os.Getenv("APPROLE_ROLE_ID"),
 			SecretId: os.Getenv("APPROLE_SECRET_ID"),
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := client.SetToken(resp.Auth.ClientToken); err != nil {
+		log.Fatal(err)
+	}
+	return client
+}
+
+func UseKubernetes(ctx context.Context) *vault.Client {
+	client := SetupConnection()
+
+	resp, err := client.Auth.KubernetesLogin(
+		ctx,
+		schema.KubernetesLoginRequest{
+			Role: os.Getenv("KUBERNETES_ROLE"),
 		},
 	)
 	if err != nil {
