@@ -2,8 +2,7 @@ FROM node:latest AS build
 
 WORKDIR /app
 
-COPY package.json ./
-COPY package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 COPY . ./
 RUN npm run build
@@ -13,12 +12,14 @@ FROM node:lts-alpine3.20
 RUN apk update && apk upgrade && apk add dumb-init
 USER 1000
 
-WORKDIR /app
+# Copy node_modules from the build stage
+COPY --chown=1000:1000 --from=build /app/node_modules ./node_modules
+COPY --chown=1000:1000 --from=build /app/build ./build
+COPY --chown=1000:1000 --from=build /app/package.json ./
+COPY --chown=1000:1000 --from=build /app/package-lock.json ./
 
-COPY --chown=1000:1000 --from=build /app/build /app/package.json ./
+EXPOSE 8080
 
-EXPOSE 8081
+ENV HOST=0.0.0.0 PORT=8080 NODE_ENV=production
 
-ENV HOST=0.0.0.0 PORT=8081 NODE_ENV=production
-
-CMD ["dumb-init","node","index.js"]
+CMD ["dumb-init","node","build/index.js"]

@@ -17,11 +17,14 @@
 
 	let input = '';
 
-	$: paginatedSource = secrets.filter(p => p.path.path.includes(input)).slice(
-		pagination.page * pagination.limit,
-		pagination.page * pagination.limit + pagination.limit
-	);
+	$: paginatedSource = secrets
+		.filter((p) => p.path.path.includes(input))
+		.slice(
+			pagination.page * pagination.limit,
+			pagination.page * pagination.limit + pagination.limit
+		);
 </script>
+
 <div class="container h-full w-full mx-auto flex-col justify-center">
 	<div class="flex flex-col">
 		<h2 class="h2 mt-2 font-thin">search through your paths</h2>
@@ -44,8 +47,8 @@
 		<div class="mt-4">
 			<Paginator
 				bind:settings={pagination}
-				showFirstLastButtons="{true}"
-				showPreviousNextButtons="{true}"
+				showFirstLastButtons={true}
+				showPreviousNextButtons={true}
 			/>
 		</div>
 	</div>

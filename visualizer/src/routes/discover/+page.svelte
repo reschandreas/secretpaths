@@ -26,7 +26,7 @@
 	interface SubwayStation {
 		id: string;
 		name: string;
-		level: number,
+		level: number;
 		parents?: string[];
 	}
 
@@ -69,11 +69,12 @@
 
 	const paths: SubwayStation[][] = withLevels;
 </script>
+
 <div class="p-5 w-full h-full">
 	<div class="container h-full w-full mx-auto flex-col justify-center">
 		<div class="flex flex-col">
 			<h2 class="h2 mt-2 font-thin">check out your secretpaths</h2>
 		</div>
-		<SubwayChart data={paths} information="{information}" />
+		<SubwayChart data={paths} {information} />
 	</div>
 </div>

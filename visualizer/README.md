@@ -37,7 +37,6 @@ You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
 
-
 ## Open source Licenses
 
 ### Tangled Tree Visualization II
@@ -68,5 +67,5 @@ SOFTWARE.
 
 #### Modifications
 
-The source code was modified to work with svelte and to be used with different types of data, as well as 
+The source code was modified to work with svelte and to be used with different types of data, as well as
 trying to make it more readable and maintainable. The original code can be found at the link above.

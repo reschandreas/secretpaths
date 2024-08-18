@@ -23,29 +23,36 @@
 
 	let show = false;
 
-	$: pack = d3.pack()
+	$: pack = d3
+		.pack()
 		.size([width - margin * 2, width - margin * 2])
 		.padding(3);
 
-	$: root = pack(d3.hierarchy({ children: policies })
-		.sum((d) => getSize(d)));
+	$: root = pack(d3.hierarchy({ children: policies }).sum((d) => getSize(d)));
 
 	onMount(() => {
 		show = true;
 	});
-
 </script>
 
 <div class="container" bind:clientWidth={width}>
-	<svg width="{width}" height="{width}">
+	<svg {width} height={width}>
 		{#if show}
 			<g transform={`translate(${margin},${margin})`}>
 				{#each policies as policy, i}
-					<g transition:blur|global={{duration: 400, delay: i * 50}}
-						 transform={`translate(${root.leaves().find(d => d.data === policy)?.x},${root.leaves().find(d => d.data === policy)?.y})`}>
-						<circle fill-opacity="0.7" fill={color(name(policy))} r={root.leaves().find(d => d.data === policy)?.r}
+					<g
+						transition:blur|global={{ duration: 400, delay: i * 50 }}
+						transform={`translate(${root.leaves().find((d) => d.data === policy)?.x},${root.leaves().find((d) => d.data === policy)?.y})`}
+					>
+						<circle
+							fill-opacity="0.7"
+							fill={color(name(policy))}
+							r={root.leaves().find((d) => d.data === policy)?.r}
 						/>
-						<text clip-path={`circle(${root.leaves().find(d => d.data === policy)?.r})`} class="text-white">
+						<text
+							clip-path={`circle(${root.leaves().find((d) => d.data === policy)?.r})`}
+							class="text-white"
+						>
 							{#each names(policy) as name, index}
 								<tspan x="0" y="${index - names(policy).length / 2 + 0.35}em">{name}</tspan>
 							{/each}
@@ -58,10 +65,11 @@
 		{/if}
 	</svg>
 </div>
+
 <style>
-    svg {
-        text-anchor: middle;
-        display: block;
-        margin: auto;
-    }
+	svg {
+		text-anchor: middle;
+		display: block;
+		margin: auto;
+	}
 </style>

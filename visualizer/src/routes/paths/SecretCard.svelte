@@ -7,17 +7,18 @@
 	let name = splitPath.pop();
 	let parts = splitPath.length;
 </script>
+
 <div class="card card-hover">
 	<header class="card-header mt-2 h4">{name}</header>
 	<section class="mt-2 ml-4 mr-4 min-h-20 max-h-20">
 		<ol class="breadcrumb mt-1 flex-wrap">
-			{#each splitPath as crumb, index }
+			{#each splitPath as crumb, index}
 				{#if crumb === ''}
 					<li class="crumb">/</li>
 				{:else}
 					<li class="crumb">{crumb}</li>
 				{/if}
-				{#if index < parts - 1 }
+				{#if index < parts - 1}
 					<li class="crumb-separator" aria-hidden="true">&#x290D;</li>
 				{/if}
 			{/each}
