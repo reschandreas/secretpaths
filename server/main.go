@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/maypok86/otter"
 	"log"
 	"net/http"
 	"secretpaths/backend"
@@ -11,63 +12,152 @@ import (
 	"time"
 )
 
-func getPoliciesAPI(c *gin.Context) {
-	ctx := context.Background()
-	client := backend.UseAppRole(ctx)
-	policies, err := getPolicies(ctx, client)
-	if err != nil {
-		log.Fatal(err)
+func getPolicies(c *gin.Context) {
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	if cache.Has("policies") {
+		var policies, _ = cache.Get("policies")
+		c.IndentedJSON(http.StatusOK, policies)
+	} else {
+		ctx := context.Background()
+		client := backend.UseAppRole(ctx)
+		policies, err := GetPolicies(ctx, client)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cache.Set("policies", policies)
+		c.IndentedJSON(http.StatusOK, policies)
 	}
-	c.IndentedJSON(http.StatusOK, policies)
 }
 
-func getPathsAPI(c *gin.Context) {
-	ctx := context.Background()
-	client := backend.UseAppRole(ctx)
-	paths, err := getPaths(ctx, client)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	c.IndentedJSON(http.StatusOK, paths)
+func healthz(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+	})
 }
 
-func getGraphApi(c *gin.Context) {
-	ctx := context.Background()
-	client := backend.UseAppRole(ctx)
-	paths, err := getGraphPaths(ctx, client)
-	if err != nil {
-		log.Fatal(err)
+func getPaths(c *gin.Context) {
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	if cache.Has("paths") {
+		var paths, _ = cache.Get("paths")
+		c.IndentedJSON(http.StatusOK, paths)
+	} else {
+		ctx := context.Background()
+		client := backend.UseAppRole(ctx)
+		paths, err := GetPaths(ctx, client)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cache.Set("paths", paths)
+		c.IndentedJSON(http.StatusOK, paths)
 	}
-
-	c.IndentedJSON(http.StatusOK, paths)
 }
 
-func getAnalyzedSecretsAPI(c *gin.Context) {
-	ctx := context.Background()
+func getGraph(c *gin.Context) {
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	if cache.Has("graph") {
+		var paths, _ = cache.Get("graph")
+		c.IndentedJSON(http.StatusOK, paths)
+	} else {
+		ctx := context.Background()
+		client := backend.UseAppRole(ctx)
+		paths, err := getGraphPaths(ctx, client)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cache.Set("graph", paths)
+		c.IndentedJSON(http.StatusOK, paths)
+	}
+}
+
+func getAnalyzedSecret(c *gin.Context) {
+	path := c.Query("path")
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	if !cache.Has("analyzedSecrets") {
+		_, err := analyzeSecrets(context.Background(), cache)
+		if err != nil {
+			return
+		}
+	}
+	if cache.Has(path) {
+		var analyzedSecret, _ = cache.Get(path)
+		c.IndentedJSON(http.StatusOK, analyzedSecret)
+	} else {
+		c.IndentedJSON(http.StatusNotFound, []string{})
+	}
+}
+
+func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnalyzedSecret, error) {
 	client := backend.UseAppRole(ctx)
-	paths, err := getPaths(ctx, client)
+	paths, err := GetPaths(ctx, client)
 	if err != nil {
 		log.Fatal(err)
 	}
-	policies, _ := getPolicies(ctx, client)
-	analyzedPaths := []models.AnalyzedSecret{}
-
+	policies, _ := GetPolicies(ctx, client)
+	var analyzedPaths []models.AnalyzedSecret
 	for _, path := range paths {
-		accessiblePolicies := []models.Policy{}
+		var accessiblePolicies []models.Policy
 		for _, policy := range policies {
 			if policy.HasAccessTo(path.Path) {
 				accessiblePolicies = append(accessiblePolicies, policy)
 			}
 		}
+		for _, policy := range accessiblePolicies {
+			if !cache.Has(path.Path) {
+				cache.Set(path.Path, []string{policy.Name})
+			} else {
+				entry, _ := cache.Get(path.Path)
+				cached := entry.([]string)
+				cached = append(cached, policy.Name)
+				// make a set out of the cached values
+				set := make(map[string]struct{})
+				for _, value := range cached {
+					set[value] = struct{}{}
+				}
+				cached = []string{}
+				for key := range set {
+					cached = append(cached, key)
+				}
+				cache.Set(path.Path, cached)
+			}
+		}
 		analyzedPaths = append(analyzedPaths, models.AnalyzedSecret{Path: path, Policies: accessiblePolicies})
 	}
+	cache.Set("analyzedSecrets", analyzedPaths)
+	return analyzedPaths, nil
+}
 
-	c.IndentedJSON(http.StatusOK, analyzedPaths)
+func getAnalyzedSecrets(c *gin.Context) {
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	if cache.Has("analyzedSecrets") {
+		var analyzedSecret, _ = cache.Get("analyzedSecrets")
+		c.IndentedJSON(http.StatusOK, analyzedSecret)
+	} else {
+		response, _ := analyzeSecrets(context.Background(), cache)
+		c.IndentedJSON(http.StatusOK, response)
+	}
+}
+
+func CacheProvider() gin.HandlerFunc {
+	cache, err := otter.MustBuilder[string, any](10_000).
+		CollectStats().
+		Cost(func(key string, value any) uint32 {
+			return 1
+		}).
+		WithTTL(5 * time.Minute).
+		Build()
+	if err != nil {
+		panic(err)
+	}
+	return func(c *gin.Context) {
+		c.Set("cache", cache)
+		c.Next()
+	}
 }
 
 func main() {
 	router := gin.Default()
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"*"},
@@ -76,12 +166,15 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-	router.GET("/paths", getPathsAPI)
-	router.GET("/graph", getGraphApi)
-	router.GET("/policies", getPoliciesAPI)
-	router.GET("/analyzedSecrets", getAnalyzedSecretsAPI)
+	router.Use(CacheProvider())
+	router.GET("/healthz", healthz)
+	router.GET("/paths", getPaths)
+	router.GET("/graph", getGraph)
+	router.GET("/policies", getPolicies)
+	router.GET("/analyzed", getAnalyzedSecret)
+	router.GET("/analyzedSecrets", getAnalyzedSecrets)
 
-	err := router.Run("0.0.0.0:8080")
+	err := router.Run(":8081")
 	if err != nil {
 		return
 	}

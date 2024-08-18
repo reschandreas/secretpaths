@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func getPolicies(ctx context.Context, client *vault.Client) ([]models.Policy, error) {
+func GetPolicies(ctx context.Context, client *vault.Client) ([]models.Policy, error) {
 	response, err := client.System.PoliciesListAclPolicies(ctx)
 
 	if err != nil {
@@ -98,7 +98,7 @@ func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, k
 
 }
 
-func getPaths(ctx context.Context, client *vault.Client) ([]models.Secret, error) {
+func GetPaths(ctx context.Context, client *vault.Client) ([]models.Secret, error) {
 	kvEngine := "secret"
 
 	val, ok := os.LookupEnv("VAULT_KV_ENGINE")

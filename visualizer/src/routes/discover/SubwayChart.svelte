@@ -4,6 +4,7 @@
 	import { draw, fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { ProgressBar } from '@skeletonlabs/skeleton';
+	import SecretInfoBox from './SecretInfoBox.svelte';
 
 	interface SubwayStation {
 		id: string;
@@ -91,6 +92,7 @@
 	const metro_d = 4;
 	const min_family_height = 22;
 	let show = false;
+	let highlightedNode: string | undefined = undefined;
 
 	const paths: Map<string, string[]> = new Map();
 	let allIds: Set<string> = new Set();
@@ -446,6 +448,21 @@
 		});
 	}
 
+	async function showInfoBox(e: MouseEvent) {
+		if (!e.target) {
+			return;
+		}
+		const id: string = (e.currentTarget as unknown as Element).getAttribute('data-id');
+		if (!id) {
+			return;
+		}
+		if (highlightedNode === id) {
+			highlightedNode = undefined;
+			return;
+		}
+		highlightedNode = id;
+	}
+
 	function entryMouseOut(e: MouseEvent) {
 		if (!e.currentTarget) {
 			return;
@@ -473,18 +490,26 @@
 	}
 
 </script>
-
 {#if show}
 	<div class="container hide-scrollbar content-center overflow-auto">
-		<svg width="{tangleLayout.layout.width}" height="{
-			tangleLayout.layout.height}">
+		{#if highlightedNode }
+			<div class="absolute end-60" transition:fade={{duration: 50}}>
+				<SecretInfoBox
+					secret={highlightedNode}/>
+			</div>
+		{/if}
+		<svg width="{tangleLayout.layout.width}"
+				 height="{
+			tangleLayout.layout.height}"
+				 class="z-0">
 			<style>
 
           text {
               font-family: "Roboto Mono Thin", sans-serif;
-							font-weight: lighter;
+              font-weight: lighter;
               font-size: 15px;
           }
+
           .node {
               stroke-linecap: round;
           }
@@ -493,13 +518,13 @@
               stroke-width: 7px;
           }
 
-					.inner-dot-highlight {
-							stroke-width: 7px;
-					}
+          .inner-dot-highlight {
+              stroke-width: 7px;
+          }
 
-					.outer-dot-highlight {
-							stroke-width: 15px;
-					}
+          .outer-dot-highlight {
+              stroke-width: 15px;
+          }
 			</style>
 			{#each tangleLayout.bundles as b, i}
 				{#each b.links as link}
@@ -514,7 +539,7 @@
 							L{link.x_bundle} {link.y_source - link.c2}
 							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
 							L{link.x_source} {link.y_source}"
-							stroke-width="5"/>
+							stroke-width="5" />
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-2"
 							transition:draw|global={{duration: 500, delay: i * 100}}
@@ -525,7 +550,7 @@
 							L{link.x_bundle} {link.y_source - link.c2}
 							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
 							L{link.x_source} {link.y_source}"
-							stroke="{color(b, i)}"/>
+							stroke="{color(b, i)}" />
 					{/if}
 				{/each}
 			{/each}
@@ -545,7 +570,7 @@
 					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}" />
 
 				<text
-					class="font-thin dark:font-white stroke-black dark:stroke-white belongs-to-{node.data.id}"
+					class="fill-black dark:fill-white belongs-to-{node.data.id}"
 					data-id="{node.data.id}"
 					transition:fade|global={{duration: 400, delay: i * 50}}
 					x="{node.x}"
@@ -553,6 +578,7 @@
 					y="{node.y - node.height / 2 - 8}"
 					on:mouseover|preventDefault={entryMouseOver}
 					on:mouseout|preventDefault={entryMouseOut}
+					on:click|preventDefault={showInfoBox}
 					on:focus|preventDefault={() => {}}
 					on:blur|preventDefault={() => {}}>
 					{node.data.name}
@@ -562,6 +588,6 @@
 	</div>
 {:else}
 	<div class="container justify-center items-center h-full mx-auto flex">
-		<ProgressBar class="w-1/2 content-center"/>
+		<ProgressBar class="w-1/2 content-center" />
 	</div>
 {/if}
