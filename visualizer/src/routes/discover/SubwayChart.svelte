@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { ProgressBar } from '@skeletonlabs/skeleton';
 	import SecretInfoBox from './SecretInfoBox.svelte';
+	import type { Information } from '../../types';
 
 	interface SubwayStation {
 		id: string;
@@ -77,6 +78,8 @@
 	}
 
 	export let data: SubwayStation[][];
+
+	export let information: Information;
 
 	let options = {
 		c: 16,
@@ -495,7 +498,7 @@
 		{#if highlightedNode }
 			<div class="absolute end-60" transition:fade={{duration: 50}}>
 				<SecretInfoBox
-					secret={highlightedNode}/>
+					secret={highlightedNode} information="{information}"/>
 			</div>
 		{/if}
 		<svg width="{tangleLayout.layout.width}"

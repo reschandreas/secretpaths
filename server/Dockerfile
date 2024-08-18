@@ -17,6 +17,8 @@ RUN go build -o /server
 
 FROM scratch
 ENV GIN_MODE=release
+ENV VAULT_ADDR=http://localhost:8200
+ENV VAULT_KV_ENGINE_PATH=secret
 COPY --from=builder /server /server
 
 EXPOSE 8081

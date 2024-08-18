@@ -1,11 +1,27 @@
 <script lang="ts">
-	import type { GraphEntry } from '../../types';
+	import type { GraphEntry, Information } from '../../types';
 	import SubwayChart from './SubwayChart.svelte';
+	import { onMount } from 'svelte';
 
 	/** @type {import('../$types').PageData} */
 	export let data;
 
 	let newData: GraphEntry = data.graph;
+
+	let information: Information;
+
+	async function loadInformation() {
+		try {
+			const res = await fetch(`/info`);
+			information = await res.json();
+		} catch (err) {
+			console.error(err);
+		}
+	}
+
+	onMount(() => {
+		loadInformation();
+	});
 
 	interface SubwayStation {
 		id: string;
@@ -58,6 +74,6 @@
 		<div class="flex flex-col">
 			<h2 class="h2 mt-2 font-thin">check out your secretpaths</h2>
 		</div>
-		<SubwayChart data={paths} />
+		<SubwayChart data={paths} information="{information}" />
 	</div>
 </div>

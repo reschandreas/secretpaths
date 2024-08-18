@@ -7,6 +7,7 @@ import (
 	"github.com/maypok86/otter"
 	"log"
 	"net/http"
+	"os"
 	"secretpaths/backend"
 	"secretpaths/models"
 	"time"
@@ -35,6 +36,14 @@ func getPolicies(c *gin.Context) {
 func healthz(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
+	})
+}
+
+func info(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"version":      "0.0.1",
+		"vaultAddress": os.Getenv("VAULT_ADDR"),
+		"kvEngine":     os.Getenv("VAULT_KV_ENGINE"),
 	})
 }
 
@@ -179,6 +188,7 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	router.Use(CacheProvider())
+	router.GET("/info", info)
 	router.GET("/healthz", healthz)
 	router.GET("/paths", getPaths)
 	router.GET("/graph", getGraph)

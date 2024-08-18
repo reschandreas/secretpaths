@@ -1,8 +1,10 @@
 <script lang="ts">
 
 	import { ProgressBar } from '@skeletonlabs/skeleton';
+	import type { Information } from '../../types';
 
 	export let secret: string;
+	export let information: Information;
 	// $: policies = fetchPolicies();
 	let policies: string[] | undefined = undefined;
 
@@ -12,7 +14,7 @@
 
 	async function loadPolicies() {
 		try {
-			const res = await fetch(`http://localhost:8081/analyzed?path=${secret}`);
+			const res = await fetch(`/analyzed?path=${secret}`);
 			policies = await res.json();
 		} catch (err) {
 			console.error(err);
@@ -58,7 +60,7 @@
 	</div>
 	<hr class="opacity-50" />
 	<footer class="p-4 flex justify-start items-center space-x-4">
-		<a href="http://localhost:8200/ui/vault/secrets/secret/show{secret}" target="_blank">
+		<a href="{information.vaultAddress}/ui/vault/secrets/{information.kvEngine}/show{secret}" target="_blank">
 			<button type="button" class="btn variant-filled">Bring me there!</button>
 		</a>
 	</footer>

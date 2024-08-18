@@ -24,3 +24,9 @@ export interface GraphEntry {
 	level: number,
 	children: GraphEntry[]
 }
+
+export interface Information {
+	version: string;
+	vaultAddress: string;
+	kvEngine: string;
+}

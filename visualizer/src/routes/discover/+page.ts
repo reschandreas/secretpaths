@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 
 /** @type {import('../$types').Path[]} */
 export const load = async ({ fetch }) => {
-	return await fetch('http://localhost:8081/graph')
+	return await fetch('/graph')
 		.then(response => response.json())
 		.then(graph => {
 			return {

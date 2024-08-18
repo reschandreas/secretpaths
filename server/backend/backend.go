@@ -31,7 +31,7 @@ func SetupConnection() *vault.Client {
 
 func AutoAuth(ctx context.Context) (*vault.Client, error) {
 	if os.Getenv("KUBERNETES_ROLE") != "" {
-		return UseKubernetes(ctx), nil
+		return useKubernetes(ctx), nil
 	}
 	if os.Getenv("APPROLE_ROLE_ID") != "" && os.Getenv("APPROLE_SECRET_ID") != "" {
 		return useAppRole(ctx), nil
@@ -71,7 +71,7 @@ func useAppRole(ctx context.Context) *vault.Client {
 	return client
 }
 
-func UseKubernetes(ctx context.Context) *vault.Client {
+func useKubernetes(ctx context.Context) *vault.Client {
 	client := SetupConnection()
 
 	resp, err := client.Auth.KubernetesLogin(
