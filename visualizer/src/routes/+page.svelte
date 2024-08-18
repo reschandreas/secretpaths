@@ -1,6 +1,6 @@
 <script>
-
 </script>
+
 <div class="container p-10 h-full mx-auto flex-row">
 	<h2 class="h2 font-thin">welcome to secretpaths.</h2>
 	<div class="pt-10 flex flex-col">
@@ -18,7 +18,8 @@
 			<div class="card card-hover overflow-hidden">
 				<div class="p-4 space-y-4">
 					<h6 class="h3 mb-10 font-thin" data-toc-ignore>Discover paths</h6>
-					Simply look for your secrets without any hassle. No clicking, no typing, just look for your secrets.
+					Simply look for your secrets without any hassle. No clicking, no typing, just look for your
+					secrets.
 				</div>
 				<hr class="opacity-50" />
 				<footer class="p-4 flex justify-start items-center space-x-4">

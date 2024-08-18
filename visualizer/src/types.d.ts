@@ -18,11 +18,11 @@ export interface AnalyzedSecret {
 }
 
 export interface GraphEntry {
-	path: string,
-	id: string,
-	name: string,
-	level: number,
-	children: GraphEntry[]
+	path: string;
+	id: string;
+	name: string;
+	level: number;
+	children: GraphEntry[];
 }
 
 export interface Information {

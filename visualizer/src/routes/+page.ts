@@ -2,14 +2,14 @@ import { error } from '@sveltejs/kit';
 
 /** @type {import('./$types').Policy[]} */
 export const load = async ({ fetch }) => {
-	return await fetch('/policies')
-		.then(response => response.json())
-		.then(policies => {
+	return await fetch('/v1/policies')
+		.then((response) => response.json())
+		.then((policies) => {
 			return {
 				policies: policies
 			};
 		})
-		.catch(err => {
+		.catch((err) => {
 			console.error(err);
 			return error(500, 'Failed to fetch policies');
 		});

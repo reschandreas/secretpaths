@@ -10,7 +10,7 @@
 	interface SubwayStation {
 		id: string;
 		level: number;
-		name: string,
+		name: string;
 		parents?: string[];
 	}
 
@@ -166,7 +166,7 @@
 					value.parents = value.parents.concat(node.parents);
 					map.set(id, value);
 				} else {
-					const min_level = d3.min(node.parents, p => p.level);
+					const min_level = d3.min(node.parents, (p) => p.level);
 					if (min_level === undefined) {
 						return;
 					}
@@ -218,7 +218,6 @@
 			});
 		});
 
-
 		paths.forEach((value: string[], key: string) => {
 			const newPaths: Set<string> = new Set(value);
 			value.forEach((v: string) => {
@@ -228,14 +227,16 @@
 			paths.set(key, Array.from(newPaths));
 		});
 
-		Array.from(paths.keys()).map((k: string) => {
-			const tmp: string[] = paths.get(k) || [];
-			tmp.push(k);
-			return tmp;
-		}).flat().forEach((id: string) => allIds.add(id));
+		Array.from(paths.keys())
+			.map((k: string) => {
+				const tmp: string[] = paths.get(k) || [];
+				tmp.push(k);
+				return tmp;
+			})
+			.flat()
+			.forEach((id: string) => allIds.add(id));
 
 		const bundles: Bundle[] = Array.from(bundlesMap.values());
-
 
 		// reverse pointer from parent to bundles
 		bundles.forEach((b: Bundle) => {
@@ -258,14 +259,21 @@
 
 		nodes.forEach((node: Node) => {
 			if (node.children_bundles !== undefined) {
-				const children: Bundle[][] = Array.from(node.children_bundles.keys()).map((key: string) => node.children_bundles?.get(key)?.bundles || []);
+				const children: Bundle[][] = Array.from(node.children_bundles.keys()).map(
+					(key: string) => node.children_bundles?.get(key)?.bundles || []
+				);
 				node.bundles = { bundles: children, i: 0 };
 			} else {
 				node.children_bundles = new Map<string, ChildrenBundles>();
 				node.bundles = { bundles: [], i: 0 };
 			}
 
-			node.bundles.bundles.sort((a: Bundle[], b: Bundle[]) => d3.descending(d3.max(a, d => d.span), d3.max(b, d => d.span)));
+			node.bundles.bundles.sort((a: Bundle[], b: Bundle[]) =>
+				d3.descending(
+					d3.max(a, (d) => d.span),
+					d3.max(b, (d) => d.span)
+				)
+			);
 			node.bundles.bundles.forEach((b: Bundle[], i) => (b.i = i));
 		});
 
@@ -281,15 +289,14 @@
 		options.bigc ||= node_width + c;
 
 		nodes.forEach((node: Node) => {
-				node.height = (Math.max(1, node.bundles.bundles.length) - 1) * metro_d;
-			}
-		);
+			node.height = (Math.max(1, node.bundles.bundles.length) - 1) * metro_d;
+		});
 
 		let x_offset = padding;
 		let y_offset = padding;
 
 		levels.forEach((level: Level) => {
-			const levelBundles: Bundle[] = bundles.filter(b => b.level === level.nodes[0].level);
+			const levelBundles: Bundle[] = bundles.filter((b) => b.level === level.nodes[0].level);
 			x_offset += levelBundles.length * bundle_width;
 			y_offset += level_y_padding;
 			level.nodes.forEach((node: Node) => {
@@ -302,14 +309,11 @@
 
 		let i = 0;
 		levels.forEach((level: Level) => {
-			const levelBundles: Bundle[] = bundles.filter(b => b.level === level.nodes[0].level);
+			const levelBundles: Bundle[] = bundles.filter((b) => b.level === level.nodes[0].level);
 			levelBundles.forEach((bundle: Bundle) => {
-				const parent_x: number[] = bundle.parents.map(d => d.x);
+				const parent_x: number[] = bundle.parents.map((d) => d.x);
 				const max_x: number = d3.max(parent_x) || 0;
-				bundle.x =
-					max_x +
-					node_width +
-					(levelBundles.length - 1 - bundle.i) * bundle_width;
+				bundle.x = max_x + node_width + (levelBundles.length - 1 - bundle.i) * bundle_width;
 				bundle.y = i * node_height;
 			});
 			i += level.length;
@@ -337,12 +341,12 @@
 		let y_negative_offset = 0;
 
 		levels.forEach((level: Level) => {
-			const levelBundles: Bundle[] = bundles.filter(b => b.level === level.nodes[0].level);
-			const minimum: number = d3.min(levelBundles, bundle =>
-				d3.min(bundle.links, link => link.y_source - 2 * c - (link.y_target + c))
-			) || 0;
-			y_negative_offset +=
-				-min_family_height + minimum;
+			const levelBundles: Bundle[] = bundles.filter((b) => b.level === level.nodes[0].level);
+			const minimum: number =
+				d3.min(levelBundles, (bundle) =>
+					d3.min(bundle.links, (link) => link.y_source - 2 * c - (link.y_target + c))
+				) || 0;
+			y_negative_offset += -min_family_height + minimum;
 			level.nodes.forEach((node: Node) => (node.y -= y_negative_offset));
 		});
 
@@ -352,7 +356,10 @@
 			}
 			const targetBundleOffset: number = link.target.children_bundles.get(link.bundle.id)?.i || 0;
 
-			const c1 = link.source.level - link.target.level > 1 ? Math.min(options.bigc, link.x_bundle - link.x_target, link.y_bundle - link.y_target) - c : c;
+			const c1 =
+				link.source.level - link.target.level > 1
+					? Math.min(options.bigc, link.x_bundle - link.x_target, link.y_bundle - link.y_target) - c
+					: c;
 			link.y_target =
 				link.target.y +
 				targetBundleOffset * metro_d -
@@ -362,8 +369,8 @@
 			link.c1 = c1;
 			link.c2 = c;
 		});
-		const maxWidth: number = d3.max(nodes, node => node.x) || 0;
-		const maxHeight: number = d3.max(nodes, node => node.y) || 0;
+		const maxWidth: number = d3.max(nodes, (node) => node.x) || 0;
+		const maxHeight: number = d3.max(nodes, (node) => node.y) || 0;
 		const layout = {
 			width: maxWidth + node_width + 2 * padding,
 			height: maxHeight + node_height / 2 + 2 * padding,
@@ -379,15 +386,15 @@
 	let d3Color = d3.scaleOrdinal(d3.schemeDark2);
 	const color = (_: Bundle, i: number) => d3Color(i.toString());
 	const renderChart = (data: SubwayStation[][]) => {
-
-		const nodes: Node[][] = data.map((stations: SubwayStation[]) => stations.map((station: SubwayStation) => ({ data: station } as Node)));
+		const nodes: Node[][] = data.map((stations: SubwayStation[]) =>
+			stations.map((station: SubwayStation) => ({ data: station }) as Node)
+		);
 		const levels: Level[] = nodes.map((n: Node[]) => ({ nodes: n, bundles: [], length: n.length }));
 
 		return constructTangleLayout(levels);
 	};
 
 	$: tangleLayout = renderChart(data);
-
 
 	onMount(() => {
 		show = true;
@@ -399,7 +406,9 @@
 			return [];
 		}
 		parents.push(id);
-		const pathsToHighlight = parents.map((p: string) => document.getElementsByClassName('belongs-to-' + p));
+		const pathsToHighlight = parents.map((p: string) =>
+			document.getElementsByClassName('belongs-to-' + p)
+		);
 		if (!pathsToHighlight) {
 			return [];
 		}
@@ -491,50 +500,45 @@
 			}
 		});
 	}
-
 </script>
+
 {#if show}
 	<div class="container hide-scrollbar content-center overflow-auto">
-		{#if highlightedNode }
-			<div class="absolute end-60" transition:fade={{duration: 50}}>
-				<SecretInfoBox
-					secret={highlightedNode} information="{information}"/>
+		{#if highlightedNode}
+			<div class="absolute end-60" transition:fade={{ duration: 50 }}>
+				<SecretInfoBox secret={highlightedNode} {information} />
 			</div>
 		{/if}
-		<svg width="{tangleLayout.layout.width}"
-				 height="{
-			tangleLayout.layout.height}"
-				 class="z-0">
+		<svg width={tangleLayout.layout.width} height={tangleLayout.layout.height} class="z-0">
 			<style>
+				text {
+					font-family: 'Roboto Mono Thin', sans-serif;
+					font-weight: lighter;
+					font-size: 15px;
+				}
 
-          text {
-              font-family: "Roboto Mono Thin", sans-serif;
-              font-weight: lighter;
-              font-size: 15px;
-          }
+				.node {
+					stroke-linecap: round;
+				}
 
-          .node {
-              stroke-linecap: round;
-          }
+				.highlight {
+					stroke-width: 7px;
+				}
 
-          .highlight {
-              stroke-width: 7px;
-          }
+				.inner-dot-highlight {
+					stroke-width: 7px;
+				}
 
-          .inner-dot-highlight {
-              stroke-width: 7px;
-          }
-
-          .outer-dot-highlight {
-              stroke-width: 15px;
-          }
+				.outer-dot-highlight {
+					stroke-width: 15px;
+				}
 			</style>
 			{#each tangleLayout.bundles as b, i}
 				{#each b.links as link}
-					{#if !isNaN(link.c1) }
+					{#if !isNaN(link.c1)}
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-gray dark:stroke-black"
-							transition:draw|global={{duration: 500, delay: i * 100}}
+							transition:draw|global={{ duration: 500, delay: i * 100 }}
 							d="
 							M{link.x_target} {link.y_target}
 							L{link.x_bundle - link.c1} {link.y_target}
@@ -542,10 +546,11 @@
 							L{link.x_bundle} {link.y_source - link.c2}
 							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
 							L{link.x_source} {link.y_source}"
-							stroke-width="5" />
+							stroke-width="5"
+						/>
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-2"
-							transition:draw|global={{duration: 500, delay: i * 100}}
+							transition:draw|global={{ duration: 500, delay: i * 100 }}
 							d="
 							M{link.x_target} {link.y_target}
 							L{link.x_bundle - link.c1} {link.y_target}
@@ -553,7 +558,8 @@
 							L{link.x_bundle} {link.y_source - link.c2}
 							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
 							L{link.x_source} {link.y_source}"
-							stroke="{color(b, i)}" />
+							stroke={color(b, i)}
+						/>
 					{/if}
 				{/each}
 			{/each}
@@ -561,29 +567,32 @@
 				<!-- little dot-->
 				<path
 					class="selectable node outer-dot belongs-to-{node.data.id} stroke-black dark:stroke-white"
-					data-id="{node.data.id}"
+					data-id={node.data.id}
 					stroke-width="10"
-					transition:fade|global={{duration: 200, delay: i * 5}}
-					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}" />
+					transition:fade|global={{ duration: 200, delay: i * 5 }}
+					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}"
+				/>
 				<!-- inner circle -->
 				<path
-					transition:fade|global={{duration: 200, delay: i * 5.1}}
+					transition:fade|global={{ duration: 200, delay: i * 5.1 }}
 					class="node inner-dot belongs-to-{node.data.id} stroke-white dark:stroke-black"
 					stroke-width="6"
-					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}" />
+					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}"
+				/>
 
 				<text
 					class="fill-black dark:fill-white belongs-to-{node.data.id}"
-					data-id="{node.data.id}"
-					transition:fade|global={{duration: 400, delay: i * 50}}
-					x="{node.x}"
+					data-id={node.data.id}
+					transition:fade|global={{ duration: 400, delay: i * 50 }}
+					x={node.x}
 					role="term"
-					y="{node.y - node.height / 2 - 8}"
+					y={node.y - node.height / 2 - 8}
 					on:mouseover|preventDefault={entryMouseOver}
 					on:mouseout|preventDefault={entryMouseOut}
 					on:click|preventDefault={showInfoBox}
 					on:focus|preventDefault={() => {}}
-					on:blur|preventDefault={() => {}}>
+					on:blur|preventDefault={() => {}}
+				>
 					{node.data.name}
 				</text>
 			{/each}

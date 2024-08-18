@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/reschandreas/secretpaths
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+config:
+  vaultAddr: http://127.0.0.1:8200
+  kubernetesRole: secretpaths
+  kvEngine: secret
+
+serviceAccount:
+  create: true
+  automount: true
+
+service:
+  type: ClusterIP
+  port: 8080
+  serverPort: 8081
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http-server
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http-server
