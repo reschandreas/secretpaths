@@ -15,10 +15,25 @@ serviceAccount:
   create: true
   automount: true
 
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: true
+
 service:
   type: ClusterIP
   port: 8080
   serverPort: 8081
+
+podSecurityContext: {}
+
+resources: {}
+
+securityContext: {}
 
 livenessProbe:
   httpGet:

@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "secretpaths.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if not .Values.autoscaling.enabled | default true }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
@@ -53,7 +53,6 @@ spec:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
         - name: {{ .Chart.Name }}-visualizer
           securityContext:
                 {{- toYaml .Values.securityContext | nindent 12 }}
@@ -65,11 +64,6 @@ spec:
               protocol: TCP
           resources:
                 {{- toYaml .Values.resources | nindent 12 }}
-              {{- with .Values.volumeMounts }}
-      {{- with .Values.volumes }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
