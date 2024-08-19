@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "secretpaths.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if not .Values.autoscaling.enabled | default true }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
@@ -31,7 +31,7 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}-server
+        - name: server
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}/server:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -43,6 +43,8 @@ spec:
               value: {{ .Values.config.kubernetesRole | default "secretpaths" }}
             - name: VAULT_KV_ENGINE
               value: {{ .Values.config.kvEngine | default "secret" }}
+            - name: KUBERNETES_PATH
+              value: {{ .Values.config.mountPath | default "kubernetes" }}
           ports:
             - name: http-server
               containerPort: {{ .Values.service.serverPort }}
@@ -54,7 +56,10 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
-        - name: {{ .Chart.Name }}-visualizer
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        - name: visualizer
           securityContext:
                 {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}/visualizer:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -65,9 +70,12 @@ spec:
               protocol: TCP
           resources:
                 {{- toYaml .Values.resources | nindent 12 }}
-              {{- with .Values.volumeMounts }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       {{- with .Values.volumes }}
-      nodeSelector:
+      volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.affinity }}

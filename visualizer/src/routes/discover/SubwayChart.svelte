@@ -538,7 +538,7 @@
 					{#if !isNaN(link.c1)}
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-gray dark:stroke-black"
-							transition:draw|global={{ duration: 500, delay: i * 100 }}
+							in:draw|global={{ duration: 250, delay: i * 50 }}
 							d="
 							M{link.x_target} {link.y_target}
 							L{link.x_bundle - link.c1} {link.y_target}
@@ -550,7 +550,7 @@
 						/>
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-2"
-							transition:draw|global={{ duration: 500, delay: i * 100 }}
+							in:draw|global={{ duration: 250, delay: i * 50 }}
 							d="
 							M{link.x_target} {link.y_target}
 							L{link.x_bundle - link.c1} {link.y_target}
@@ -569,12 +569,12 @@
 					class="selectable node outer-dot belongs-to-{node.data.id} stroke-black dark:stroke-white"
 					data-id={node.data.id}
 					stroke-width="10"
-					transition:fade|global={{ duration: 200, delay: i * 5 }}
+					in:fade|global={{ duration: 200, delay: i * 5 }}
 					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}"
 				/>
 				<!-- inner circle -->
 				<path
-					transition:fade|global={{ duration: 200, delay: i * 5.1 }}
+					in:fade|global={{ duration: 200, delay: i * 5.1 }}
 					class="node inner-dot belongs-to-{node.data.id} stroke-white dark:stroke-black"
 					stroke-width="6"
 					d="M{node.x} {node.y - node.height / 2} L{node.x} {node.y + node.height / 2}"
@@ -583,7 +583,7 @@
 				<text
 					class="fill-black dark:fill-white belongs-to-{node.data.id}"
 					data-id={node.data.id}
-					transition:fade|global={{ duration: 400, delay: i * 50 }}
+					transition:fade|global={{ duration: 250, delay: i * 5 }}
 					x={node.x}
 					role="term"
 					y={node.y - node.height / 2 - 8}

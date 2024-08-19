@@ -12,7 +12,7 @@ spec:
       protocol: TCP
       name: http
     - port: {{ .Values.service.serverPort }}
-      targetPort: http
+      targetPort: http-server
       protocol: TCP
       name: http-server
   selector:

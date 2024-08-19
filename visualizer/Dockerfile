@@ -5,6 +5,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . ./
+RUN echo "" > ./src/routes/dev-interceptor.ts
+RUN rm ./src/hooks.server.ts
 RUN npm run build
 
 FROM node:lts-alpine3.20

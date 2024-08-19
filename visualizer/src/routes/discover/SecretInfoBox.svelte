@@ -39,10 +39,8 @@
 					{/if}
 				{/each}
 			</ol>
-			<button>close</button>
 		</section>
 		<hr class="opacity-50" />
-		<!--		<h6 class="h4 mb-10 font-thin" data-toc-ignore>{secret}</h6>-->
 		{#if policies === undefined}
 			<ProgressBar class="w-1/2 content-center" />
 		{:else if policies.length === 0}

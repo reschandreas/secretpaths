@@ -25,5 +25,5 @@
 		</ol>
 	</section>
 	<hr class="opacity-50" />
-	<footer class="card-footer mt-2">{secret.policies.length} Policies have access</footer>
+	<footer class="card-footer mt-2">{secret.policies?.length} Policies have access</footer>
 </div>

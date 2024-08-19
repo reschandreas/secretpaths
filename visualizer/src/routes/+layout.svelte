@@ -11,6 +11,10 @@
 	import javascript from 'highlight.js/lib/languages/javascript';
 	import typescript from 'highlight.js/lib/languages/typescript';
 
+	//include dev-interceptor.ts and execute it
+	import './dev-interceptor.ts';
+
+
 	hljs.registerLanguage('xml', xml); // for HTML
 	hljs.registerLanguage('css', css);
 	hljs.registerLanguage('javascript', javascript);
@@ -29,7 +33,7 @@
 		<!-- App Bar -->
 		<AppBar>
 			<svelte:fragment slot="lead">
-				<strong class="text-xl uppercase">Secretpaths</strong>
+				<a href="/"><strong class="text-xl uppercase">Secretpaths</strong></a>
 			</svelte:fragment>
 			<svelte:fragment slot="trail">
 				<LightSwitch />

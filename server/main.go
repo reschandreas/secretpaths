@@ -26,7 +26,7 @@ func getPolicies(c *gin.Context) {
 		}
 		policies, err := GetPolicies(ctx, client)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		cache.Set("policies", policies)
 		c.IndentedJSON(http.StatusOK, policies)
@@ -60,7 +60,7 @@ func getPaths(c *gin.Context) {
 		}
 		paths, err := GetPaths(ctx, client)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		cache.Set("paths", paths)
 		c.IndentedJSON(http.StatusOK, paths)
@@ -80,7 +80,7 @@ func getGraph(c *gin.Context) {
 		}
 		paths, err := getGraphPaths(ctx, client)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		cache.Set("graph", paths)
@@ -108,14 +108,16 @@ func getAnalyzedSecret(c *gin.Context) {
 func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnalyzedSecret, error) {
 	client, err := backend.AutoAuth(ctx)
 	if err != nil {
-		log.Printf("error: %v", err)
+		log.Printf("could not authenticate: %v", err)
+		return nil, err
 	}
 	paths, err := GetPaths(ctx, client)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("could not get paths: %v", err)
+		return nil, err
 	}
 	policies, _ := GetPolicies(ctx, client)
-	var analyzedPaths []models.AnalyzedSecret
+	var analyzedPaths = []models.AnalyzedSecret{}
 	for _, path := range paths {
 		var accessiblePolicies []models.Policy
 		for _, policy := range policies {
@@ -144,6 +146,7 @@ func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]mode
 		}
 		analyzedPaths = append(analyzedPaths, models.AnalyzedSecret{Path: path, Policies: accessiblePolicies})
 	}
+
 	cache.Set("analyzedSecrets", analyzedPaths)
 	return analyzedPaths, nil
 }
@@ -177,7 +180,11 @@ func CacheProvider() gin.HandlerFunc {
 }
 
 func main() {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(
+		gin.LoggerWithWriter(gin.DefaultWriter, "/v1/healthz"),
+		gin.Recovery(),
+	)
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
@@ -188,13 +195,13 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	router.Use(CacheProvider())
-	router.GET("/info", info)
-	router.GET("/healthz", healthz)
-	router.GET("/paths", getPaths)
-	router.GET("/graph", getGraph)
-	router.GET("/policies", getPolicies)
-	router.GET("/analyzed", getAnalyzedSecret)
-	router.GET("/analyzedSecrets", getAnalyzedSecrets)
+	router.GET("/v1/info", info)
+	router.GET("/v1/healthz", healthz)
+	router.GET("/v1/paths", getPaths)
+	router.GET("/v1/graph", getGraph)
+	router.GET("/v1/policies", getPolicies)
+	router.GET("/v1/analyzed", getAnalyzedSecret)
+	router.GET("/v1/analyzedSecrets", getAnalyzedSecrets)
 
 	err := router.Run(":8081")
 	if err != nil {
