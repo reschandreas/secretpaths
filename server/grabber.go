@@ -15,7 +15,7 @@ func GetPolicies(ctx context.Context, client *vault.Client) ([]models.Policy, er
 
 	if err != nil {
 		log.Default().Println("error listing policies")
-		log.Fatal(err)
+		log.Println(err)
 	}
 	var policies []models.Policy
 	for _, rawPolicy := range response.Data.Keys {
@@ -25,9 +25,10 @@ func GetPolicies(ctx context.Context, client *vault.Client) ([]models.Policy, er
 		}
 		policy, err := parsePolicy(ctx, client, rawPolicy)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("could not parse policy", rawPolicy)
+		} else {
+			policies = append(policies, policy)
 		}
-		policies = append(policies, policy)
 	}
 	return policies, nil
 }
@@ -36,7 +37,7 @@ func parsePolicy(ctx context.Context, client *vault.Client, name string) (policy
 	p, err := client.System.PoliciesReadAclPolicy(ctx, name)
 	if err != nil {
 		log.Default().Println("error reading policy", name)
-		log.Fatal(err)
+		log.Println(err)
 	}
 	policy, err = models.FromHCL(name, []byte(p.Data.Policy))
 	return
@@ -108,7 +109,7 @@ func GetPaths(ctx context.Context, client *vault.Client) ([]models.Secret, error
 
 	secrets, err := recursivelyGetPaths(ctx, client, "/", kvEngine)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	return secrets, err
@@ -124,7 +125,7 @@ func getGraphPaths(ctx context.Context, client *vault.Client) (models.GraphEntry
 
 	secrets, err := recursivelyGetGraphPaths(ctx, client, "/", kvEngine)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	return models.GraphEntry{AbsolutePath: "/", Id: "/", Name: "/", Children: secrets}, err

@@ -41,7 +41,7 @@ func writeSecret(ctx context.Context, path string, key string, value string, cli
 		}},
 		vault.WithMountPath("secret"))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 

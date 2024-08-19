@@ -7,7 +7,7 @@
 		<div class="w-full text-token grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div class="card card-hover overflow-hidden">
 				<div class="p-4 space-y-4">
-					<h6 class="h3 mb-10 font-thin" data-toc-ignore>Inspect paths</h6>
+					<h6 class="h3 mb-10 font-thin" data-toc-ignore>Inspect policies</h6>
 					Quickly inspect your paths and see which policies can access them. No more guessing, just inspect.
 				</div>
 				<hr class="opacity-50" />
