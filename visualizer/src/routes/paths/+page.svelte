@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Paginator, type PaginationSettings } from '@skeletonlabs/skeleton';
 	import SecretCard from './SecretCard.svelte';
-	import type { AnalyzedSecret } from '../../types';
+	import type { AnnotatedSecret } from '../../types';
 
 	/** @type {import('../$types').PageData} */
 	export let data;
 
-	let secrets: AnalyzedSecret[] = data.analyzedSecrets;
+	let secrets: AnnotatedSecret[] = data.annotatedSecrets;
 
 	let pagination = {
 		page: 0,

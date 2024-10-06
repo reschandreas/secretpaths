@@ -12,7 +12,7 @@ export interface Path {
 	path: string;
 }
 
-export interface AnalyzedSecret {
+export interface AnnotatedSecret {
 	path: Path;
 	policies: Policy[];
 }

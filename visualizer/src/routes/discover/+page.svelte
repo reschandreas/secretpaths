@@ -40,7 +40,7 @@
 			const station: SubwayStation = {
 				id: child.id,
 				name: child.name,
-				level: child.level,
+				level: child.path.split('/').length - 1,
 				parents: [entry.id]
 			};
 			stations.push(station);

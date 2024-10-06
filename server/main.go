@@ -88,7 +88,28 @@ func getGraph(c *gin.Context) {
 	}
 }
 
-func getAnalyzedSecret(c *gin.Context) {
+func getLeafs(c *gin.Context) {
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	if cache.Has("leafs") {
+		var paths, _ = cache.Get("leafs")
+		c.IndentedJSON(http.StatusOK, paths)
+	} else {
+		ctx := context.Background()
+		client, err := backend.AutoAuth(ctx)
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+		paths, err := getGraphPaths(ctx, client)
+		if err != nil {
+			log.Println(err)
+		}
+
+		cache.Set("leafs", paths)
+		c.IndentedJSON(http.StatusOK, paths)
+	}
+}
+
+func getAnnotatedSecret(c *gin.Context) {
 	path := c.Query("path")
 	cache := c.MustGet("cache").(otter.Cache[string, any])
 	if !cache.Has("analyzedSecrets") {
@@ -105,7 +126,7 @@ func getAnalyzedSecret(c *gin.Context) {
 	}
 }
 
-func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnalyzedSecret, error) {
+func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnnotatedSecret, error) {
 	client, err := backend.AutoAuth(ctx)
 	if err != nil {
 		log.Printf("could not authenticate: %v", err)
@@ -117,7 +138,7 @@ func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]mode
 		return nil, err
 	}
 	policies, _ := GetPolicies(ctx, client)
-	var analyzedPaths = []models.AnalyzedSecret{}
+	var analyzedPaths = []models.AnnotatedSecret{}
 	for _, path := range paths {
 		var accessiblePolicies []models.Policy
 		for _, policy := range policies {
@@ -144,14 +165,14 @@ func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]mode
 				cache.Set(path.Path, cached)
 			}
 		}
-		analyzedPaths = append(analyzedPaths, models.AnalyzedSecret{Path: path, Policies: accessiblePolicies})
+		analyzedPaths = append(analyzedPaths, models.AnnotatedSecret{Path: path, Policies: accessiblePolicies})
 	}
 
 	cache.Set("analyzedSecrets", analyzedPaths)
 	return analyzedPaths, nil
 }
 
-func getAnalyzedSecrets(c *gin.Context) {
+func getAnnotatedSecrets(c *gin.Context) {
 	cache := c.MustGet("cache").(otter.Cache[string, any])
 	if cache.Has("analyzedSecrets") {
 		var analyzedSecret, _ = cache.Get("analyzedSecrets")
@@ -199,9 +220,10 @@ func main() {
 	router.GET("/v1/healthz", healthz)
 	router.GET("/v1/paths", getPaths)
 	router.GET("/v1/graph", getGraph)
+	router.GET("/v1/graph", getLeafs)
 	router.GET("/v1/policies", getPolicies)
-	router.GET("/v1/analyzed", getAnalyzedSecret)
-	router.GET("/v1/analyzedSecrets", getAnalyzedSecrets)
+	router.GET("/v1/annotated", getAnnotatedSecret)
+	router.GET("/v1/annotatedSecrets", getAnnotatedSecrets)
 
 	err := router.Run(":8081")
 	if err != nil {

@@ -1,6 +1,6 @@
 package models
 
-type AnalyzedSecret struct {
+type AnnotatedSecret struct {
 	Path     Secret   `json:"path"`
 	Policies []Policy `json:"policies"`
 }

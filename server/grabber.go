@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/google/uuid"
 	"github.com/hashicorp/vault-client-go"
 	"log"
 	"os"
@@ -83,8 +84,9 @@ func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, k
 	}
 	var secrets []models.GraphEntry
 	for _, subPath := range response.Data.Keys {
+		id := uuid.New().String()
 		if !strings.HasSuffix(subPath, "/") {
-			secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: path + subPath, Level: strings.Count(path+subPath, "/"), Name: subPath})
+			secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: id, Name: subPath})
 			continue
 		}
 		subSecrets, err := recursivelyGetGraphPaths(ctx, client, path+subPath, kvEngine)
@@ -93,7 +95,7 @@ func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, k
 			continue
 		}
 		subPath = strings.Replace(subPath, "/", "", 1)
-		secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: path + subPath, Name: subPath, Level: strings.Count(path+subPath, "/"), Children: subSecrets})
+		secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: id, Name: subPath, Children: subSecrets})
 	}
 	return secrets, err
 

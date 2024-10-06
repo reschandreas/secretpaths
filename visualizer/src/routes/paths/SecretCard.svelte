@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { AnalyzedSecret } from '../../types';
+	import type { AnnotatedSecret } from '../../types';
 
-	export let secret: AnalyzedSecret;
+	export let secret: AnnotatedSecret;
 
 	let splitPath = secret.path.path.split('/');
 	let name = splitPath.pop();

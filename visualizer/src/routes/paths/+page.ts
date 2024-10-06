@@ -2,11 +2,11 @@ import { error } from '@sveltejs/kit';
 
 /** @type {import('../$types').Path[]} */
 export const load = async ({ fetch }) => {
-	return await fetch('/v1/analyzedSecrets')
+	return await fetch('/v1/annotatedSecrets')
 		.then((response) => response.json())
-		.then((analyzedSecrets) => {
+		.then((annotatedSecrets) => {
 			return {
-				analyzedSecrets: analyzedSecrets
+				annotatedSecrets: annotatedSecrets
 			};
 		})
 		.catch((err) => {
