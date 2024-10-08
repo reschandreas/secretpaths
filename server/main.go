@@ -284,7 +284,7 @@ func CacheProvider() gin.HandlerFunc {
 		Cost(func(key string, value any) uint32 {
 			return 1
 		}).
-		WithTTL(1 * time.Second).
+		WithTTL(5 * time.Minute).
 		Build()
 	if err != nil {
 		panic(err)

@@ -67,7 +67,7 @@ func writePolicy(ctx context.Context, client *vault.Client, name string, paths [
 func main() {
 	ctx := context.Background()
 
-	numberOfSecrets := 30
+	numberOfSecrets := 100
 	numberOfPolicies := 30
 
 	client := backend.UseToken("my-token")

@@ -11,13 +11,13 @@
 		id: string;
 		level: number;
 		name: string;
-		parents?: string[];
+		parent?: string;
 	}
 
 	interface Node {
 		id: string;
 		data: SubwayStation;
-		parents: Node[];
+		parent: Node;
 		level: number;
 		bundle?: Bundle;
 		bundles: Bundles;
@@ -44,7 +44,7 @@
 
 	interface Bundle {
 		id: string;
-		parents: Node[];
+		parent: Node;
 		level: number;
 		span: number;
 		links: Link[];
@@ -100,14 +100,6 @@
 	const paths: Map<string, string[]> = new Map();
 	let allIds: Set<string> = new Set();
 
-	const addDepthInformation = (levels: Level[]) => {
-		levels.forEach((level: Level, i: number) => {
-			level.nodes.forEach((node: Node) => {
-				node.level = i;
-			});
-		});
-	};
-
 	const populateNodeMap = (nodes: Node[]) => {
 		const nodes_index: Map<string, Node> = new Map();
 		nodes.forEach((node: Node) => {
@@ -116,69 +108,34 @@
 		return nodes_index;
 	};
 
-	const getNodes = (levels: Level[]): Node[] => {
-		const nodes: Node[] = [];
-		levels.forEach((level: Level) => {
-			nodes.push(...level.nodes);
-		});
-		return nodes;
-	};
-
-	const fix_parents = (nodes: Node[], nodes_index: Map<string, Node>) => {
-		nodes.forEach((node: Node) => {
-			let parents: Node[] = [];
-			if (node.data.parents !== undefined) {
-				node.data.parents.forEach((parent: string) => {
-					const value = nodes_index.get(parent);
-					if (value) {
-						parents.push(value);
-					}
-				});
-			}
-			node.parents = parents;
-		});
-	};
-
-	const constructTangleLayout = (levels: Level[]) => {
-		//precompute level depth
-		addDepthInformation(levels);
-		const nodes: Node[] = getNodes(levels);
-
+	const constructTangleLayout = (levels: Level[], nodes: Node[]) => {
 		const nodesMap: Map<string, Node> = populateNodeMap(nodes);
 		const bundlesMap: Map<string, Bundle> = new Map();
 
-		fix_parents(nodes, nodesMap);
-
 		// precompute bundles
 		levels.forEach((level: Level, i: number) => {
+			let index = 0;
 			const map: Map<string, Bundle> = new Map();
 			level.nodes.forEach((node: Node) => {
-				if (node.parents?.length == 0) {
+				if (node.parent === undefined) {
 					return;
 				}
 
-				const id = node.parents
-					.map((d: Node) => d.data.id)
-					.sort()
-					.join('-X-');
+				const id = node.parent.data.id;
 				const value = map.get(id);
 				if (value) {
-					value.parents = value.parents.concat(node.parents);
+					value.parent = node.parent;
 					map.set(id, value);
 				} else {
-					const min_level = d3.min(node.parents, (p) => p.level);
-					if (min_level === undefined) {
-						return;
-					}
 					const bundle: Bundle = {
-						i: 0,
+						i: index++,
 						links: [],
 						x: 0,
 						y: 0,
 						id: id,
-						parents: node.parents,
+						parent: node.parent,
 						level: i,
-						span: i - min_level
+						span: i - 1
 					};
 					map.set(id, bundle);
 					bundlesMap.set(id, bundle);
@@ -186,36 +143,35 @@
 				node.bundle = map.get(id);
 				return node;
 			});
-
-			let ids = 0;
-			map.forEach((b: Bundle) => (b.i = ids++));
 		});
 
 		const links: Link[] = [];
 
 		nodes.forEach((node: Node) => {
-			node.parents.forEach((parent: Node) => {
-				if (node.bundle === undefined) {
-					return;
-				}
-				const link: Link = {
-					c1: 0,
-					c2: 0,
-					x_bundle: 0,
-					x_source: 0,
-					x_target: 0,
-					y_bundle: 0,
-					y_source: 0,
-					y_target: 0,
-					source: node,
-					bundle: node.bundle,
-					target: parent
-				};
-				const pathsToHere = paths.get(node.data.id) || [];
-				pathsToHere.push(parent.data.id);
-				paths.set(node.data.id, pathsToHere);
-				links.push(link);
-			});
+			let parent = node.parent;
+			if (parent === undefined) {
+				return;
+			}
+			if (node.bundle === undefined) {
+				return;
+			}
+			const link: Link = {
+				c1: 0,
+				c2: 0,
+				x_bundle: 0,
+				x_source: 0,
+				x_target: 0,
+				y_bundle: 0,
+				y_source: 0,
+				y_target: 0,
+				source: node,
+				bundle: node.bundle,
+				target: parent
+			};
+			const pathsToHere = paths.get(node.data.id) || [];
+			pathsToHere.push(parent.data.id);
+			paths.set(node.data.id, pathsToHere);
+			links.push(link);
 		});
 
 		paths.forEach((value: string[], key: string) => {
@@ -227,35 +183,12 @@
 			paths.set(key, Array.from(newPaths));
 		});
 
-		Array.from(paths.keys())
-			.map((k: string) => {
-				const tmp: string[] = paths.get(k) || [];
-				tmp.push(k);
-				return tmp;
-			})
-			.flat()
-			.forEach((id: string) => allIds.add(id));
+		paths.forEach((value, key) => {
+			allIds.add(key);
+			value.forEach((id: string) => allIds.add(id));
+		});
 
 		const bundles: Bundle[] = Array.from(bundlesMap.values());
-
-		// reverse pointer from parent to bundles
-		bundles.forEach((b: Bundle) => {
-			b.parents.forEach((node: Node) => {
-				if (node.children_bundles === undefined) {
-					node.children_bundles = new Map<string, ChildrenBundles>();
-				}
-				let value = node.children_bundles.get(b.id);
-				if (value === undefined) {
-					value = {
-						bundles: [b],
-						i: 0
-					};
-				} else {
-					value.bundles.push(b);
-				}
-				node.children_bundles.set(b.id, value);
-			});
-		});
 
 		nodes.forEach((node: Node) => {
 			if (node.children_bundles !== undefined) {
@@ -275,6 +208,7 @@
 				)
 			);
 			node.bundles.bundles.forEach((b: Bundle[], i) => (b.i = i));
+			node.height = (Math.max(1, node.bundles.bundles.length) - 1) * metro_d;
 		});
 
 		links.forEach((link: Link) => {
@@ -288,13 +222,10 @@
 		const c = options.c;
 		options.bigc ||= node_width + c;
 
-		nodes.forEach((node: Node) => {
-			node.height = (Math.max(1, node.bundles.bundles.length) - 1) * metro_d;
-		});
-
 		let x_offset = padding;
 		let y_offset = padding;
 
+		let i = 0;
 		levels.forEach((level: Level) => {
 			const levelBundles: Bundle[] = bundles.filter((b) => b.level === level.nodes[0].level);
 			x_offset += levelBundles.length * bundle_width;
@@ -305,14 +236,11 @@
 
 				y_offset += node_height + node.height;
 			});
-		});
-
-		let i = 0;
-		levels.forEach((level: Level) => {
-			const levelBundles: Bundle[] = bundles.filter((b) => b.level === level.nodes[0].level);
 			levelBundles.forEach((bundle: Bundle) => {
-				const parent_x: number[] = bundle.parents.map((d) => d.x);
-				const max_x: number = d3.max(parent_x) || 0;
+				let max_x: number  = bundle.parent.x;
+				if (max_x < 0) {
+					max_x = 0;
+				}
 				bundle.x = max_x + node_width + (levelBundles.length - 1 - bundle.i) * bundle_width;
 				bundle.y = i * node_height;
 			});
@@ -386,12 +314,29 @@
 	let d3Color = d3.scaleOrdinal(d3.schemeDark2);
 	const color = (_: Bundle, i: number) => d3Color(i.toString());
 	const renderChart = (data: SubwayStation[][]) => {
-		const nodes: Node[][] = data.map((stations: SubwayStation[]) =>
-			stations.map((station: SubwayStation) => ({ data: station }) as Node)
+		const flatNodes: Node[] = [];
+		const nodes: Node[][] = [];
+
+		data.forEach((stations: SubwayStation[]) => {
+				let previousLevel: Node[] = [];
+				if (nodes.length > 0) {
+					previousLevel = nodes[nodes.length - 1];
+				}
+				nodes.push(
+					stations.map((station: SubwayStation) => {
+						let parent: Node | undefined = undefined;
+						if (previousLevel) {
+							parent = previousLevel.find((node: Node) => node.data.id === station.parent);
+						}
+						return ({ data: station, level: station.level, parent: parent }) as Node;
+					})
+				);
+				flatNodes.push(...nodes[nodes.length - 1]);
+			}
 		);
 		const levels: Level[] = nodes.map((n: Node[]) => ({ nodes: n, bundles: [], length: n.length }));
 
-		return constructTangleLayout(levels);
+		return constructTangleLayout(levels, flatNodes);
 	};
 
 	$: tangleLayout = renderChart(data);
@@ -511,27 +456,27 @@
 		{/if}
 		<svg width={tangleLayout.layout.width} height={tangleLayout.layout.height} class="z-0">
 			<style>
-				text {
-					font-family: 'Roboto Mono Thin', sans-serif;
-					font-weight: lighter;
-					font-size: 15px;
-				}
+          text {
+              font-family: 'Roboto Mono Thin', sans-serif;
+              font-weight: lighter;
+              font-size: 15px;
+          }
 
-				.node {
-					stroke-linecap: round;
-				}
+          .node {
+              stroke-linecap: round;
+          }
 
-				.highlight {
-					stroke-width: 7px;
-				}
+          .highlight {
+              stroke-width: 7px;
+          }
 
-				.inner-dot-highlight {
-					stroke-width: 7px;
-				}
+          .inner-dot-highlight {
+              stroke-width: 7px;
+          }
 
-				.outer-dot-highlight {
-					stroke-width: 15px;
-				}
+          .outer-dot-highlight {
+              stroke-width: 15px;
+          }
 			</style>
 			{#each tangleLayout.bundles as b, i}
 				{#each b.links as link}

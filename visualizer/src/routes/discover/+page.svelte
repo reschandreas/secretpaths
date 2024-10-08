@@ -27,7 +27,7 @@
 		id: string;
 		name: string;
 		level: number;
-		parents?: string[];
+		parent?: string;
 	}
 
 	const compressedToSubway = (entry: CompressedGraphEntry, path: string): SubwayStation[] => {
@@ -46,7 +46,7 @@
 				id: wholePath,
 				name: child.prefix,
 				level: wholePath.split('/').length - 1,
-				parents: [path]
+				parent: path
 			});
 			stations.push(...compressedToSubway(child, wholePath));
 		});
@@ -55,7 +55,7 @@
 
 	const singleEntry = compressedToSubway(newData, newData.prefix);
 
-	const root: SubwayStation = { id: '/', name: '/', level: 0, parents: [] };
+	const root: SubwayStation = { id: '/', name: '/', level: 0, parent: '' };
 	singleEntry.push(root);
 
 	const withLevels = singleEntry.reduce((acc: SubwayStation[][], station) => {
