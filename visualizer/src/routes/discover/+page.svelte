@@ -1,12 +1,12 @@
 <script lang="ts">
-	import type { GraphEntry, Information } from '../../types';
+	import type { CompressedGraphEntry, Information } from '../../types';
 	import SubwayChart from './SubwayChart.svelte';
 	import { onMount } from 'svelte';
 
 	/** @type {import('../$types').PageData} */
 	export let data;
 
-	let newData: GraphEntry = data.graph;
+	let newData: CompressedGraphEntry = data.graph;
 
 	let information: Information;
 
@@ -30,31 +30,30 @@
 		parents?: string[];
 	}
 
-	const mapGraphEntryToSubwayStation = (entry: GraphEntry): SubwayStation[] => {
+	const compressedToSubway = (entry: CompressedGraphEntry, path: string): SubwayStation[] => {
 		const children = entry.children;
 		if (!children) {
 			return [];
 		}
 		const stations: SubwayStation[] = [];
 		children.forEach((child) => {
-			const station: SubwayStation = {
-				id: child.id,
-				name: child.name,
-				level: child.path.split('/').length - 1,
-				parents: [entry.id]
-			};
-			stations.push(station);
-			if (child.children) {
-				const childStations = mapGraphEntryToSubwayStation(child);
-				if (childStations) {
-					stations.push(...childStations);
-				}
+			// console.log(child);
+			let wholePath = "/" + child.prefix;
+			if (path !== "/") {
+				wholePath = path + wholePath;
 			}
+			stations.push({
+				id: wholePath,
+				name: child.prefix,
+				level: wholePath.split('/').length - 1,
+				parents: [path]
+			});
+			stations.push(...compressedToSubway(child, wholePath));
 		});
 		return stations;
 	};
 
-	const singleEntry = mapGraphEntryToSubwayStation(newData);
+	const singleEntry = compressedToSubway(newData, newData.prefix);
 
 	const root: SubwayStation = { id: '/', name: '/', level: 0, parents: [] };
 	singleEntry.push(root);

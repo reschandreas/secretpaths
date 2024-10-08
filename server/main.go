@@ -10,6 +10,7 @@ import (
 	"os"
 	"secretpaths/backend"
 	"secretpaths/models"
+	"strconv"
 	"time"
 )
 
@@ -78,7 +79,7 @@ func getGraph(c *gin.Context) {
 		if err != nil {
 			log.Printf("error: %v", err)
 		}
-		paths, err := getGraphPaths(ctx, client)
+		paths, err := getGraphPaths(ctx, client, -1)
 		if err != nil {
 			log.Println(err)
 		}
@@ -88,25 +89,119 @@ func getGraph(c *gin.Context) {
 	}
 }
 
-func getLeafs(c *gin.Context) {
+func compressedGraphLevel(c *gin.Context) {
+	ctx := context.Background()
+	level := c.Query("l")
+	//convert level to int
+	l, _ := strconv.Atoi(level)
+	client, err := backend.AutoAuth(ctx)
+
+	if err != nil {
+		log.Printf("error: %v", err)
+	}
+	paths, err := getGraphPaths(ctx, client, l)
+	if err != nil {
+		log.Println(err)
+	}
+
+	root := models.CompressedGraphEntry{
+		Prefix:   paths.AbsolutePath,
+		Children: []models.CompressedGraphEntry{},
+	}
+
+	for _, path := range paths.Children {
+		root.Children = append(root.Children, models.CompressedGraphEntry{
+			Prefix:   path.AbsolutePath,
+			Children: appendChildren(ctx, path.AbsolutePath, path, l-1),
+		})
+	}
+	possible := []models.CompressedGraphEntry{root}
+	for i := 0; i < l; i++ {
+		newOnes := []models.CompressedGraphEntry{}
+		for _, path := range possible {
+			println(path.Prefix)
+			newChildren := []models.CompressedGraphEntry{}
+			for _, child := range path.Children {
+				absolutePath := child.Prefix
+				if path.Prefix != "/" {
+					absolutePath = path.Prefix + "/" + child.Prefix
+				}
+				what := models.CompressedGraphEntry{
+					Prefix:   absolutePath,
+					Children: child.Children,
+				}
+				newChildren = append(newChildren, what)
+			}
+			newOnes = append(newOnes, newChildren...)
+		}
+		possible = newOnes
+		if len(possible) == 0 {
+			c.IndentedJSON(http.StatusOK, nil)
+			return
+		}
+	}
+	children := []models.CompressedGraphEntry{}
+	for _, path := range possible {
+		path.Children = nil
+		children = append(children, path)
+	}
+	root.Children = children
+	c.IndentedJSON(http.StatusOK, root)
+}
+
+func compressedGraph(c *gin.Context) {
+	ctx := context.Background()
+	client, err := backend.AutoAuth(ctx)
 	cache := c.MustGet("cache").(otter.Cache[string, any])
-	if cache.Has("leafs") {
-		var paths, _ = cache.Get("leafs")
+
+	if cache.Has("new") {
+		var paths, _ = cache.Get("new")
 		c.IndentedJSON(http.StatusOK, paths)
 	} else {
-		ctx := context.Background()
-		client, err := backend.AutoAuth(ctx)
 		if err != nil {
 			log.Printf("error: %v", err)
 		}
-		paths, err := getGraphPaths(ctx, client)
+		paths, err := getGraphPaths(ctx, client, -1)
 		if err != nil {
 			log.Println(err)
 		}
 
-		cache.Set("leafs", paths)
-		c.IndentedJSON(http.StatusOK, paths)
+		root := models.CompressedGraphEntry{
+			Prefix:   paths.AbsolutePath,
+			Children: []models.CompressedGraphEntry{},
+		}
+
+		for _, path := range paths.Children {
+			root.Children = append(root.Children, models.CompressedGraphEntry{
+				Prefix:   path.Name,
+				Children: appendChildren(ctx, path.AbsolutePath, path, -1),
+			})
+		}
+		cache.Set("new", root)
+		c.IndentedJSON(http.StatusOK, root)
 	}
+}
+
+func appendChildren(ctx context.Context, prefix string, nodes models.GraphEntry, stopAtRecursion int) []models.CompressedGraphEntry {
+	if stopAtRecursion == 0 {
+		return nil
+	}
+	if stopAtRecursion > 0 {
+		stopAtRecursion--
+	}
+	if len(nodes.Children) == 0 {
+		return nil
+	}
+	var compressed models.CompressedGraphEntry
+	compressed.Prefix = prefix
+	var children []models.CompressedGraphEntry
+	for _, node := range nodes.Children {
+		children = append(children, models.CompressedGraphEntry{
+			Prefix:   node.Name,
+			Children: appendChildren(ctx, node.AbsolutePath, node, stopAtRecursion),
+		})
+	}
+	return children
 }
 
 func getAnnotatedSecret(c *gin.Context) {
@@ -189,7 +284,7 @@ func CacheProvider() gin.HandlerFunc {
 		Cost(func(key string, value any) uint32 {
 			return 1
 		}).
-		WithTTL(5 * time.Minute).
+		WithTTL(1 * time.Second).
 		Build()
 	if err != nil {
 		panic(err)
@@ -220,7 +315,8 @@ func main() {
 	router.GET("/v1/healthz", healthz)
 	router.GET("/v1/paths", getPaths)
 	router.GET("/v1/graph", getGraph)
-	router.GET("/v1/graph", getLeafs)
+	router.GET("/v1/level", compressedGraphLevel)
+	router.GET("/v1/new", compressedGraph)
 	router.GET("/v1/policies", getPolicies)
 	router.GET("/v1/annotated", getAnnotatedSecret)
 	router.GET("/v1/annotatedSecrets", getAnnotatedSecrets)

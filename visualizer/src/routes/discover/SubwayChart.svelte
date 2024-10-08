@@ -94,7 +94,7 @@
 	const level_y_padding = 16;
 	const metro_d = 4;
 	const min_family_height = 22;
-	let show = false;
+	let show = data.length < 4;
 	let highlightedNode: string | undefined = undefined;
 
 	const paths: Map<string, string[]> = new Map();

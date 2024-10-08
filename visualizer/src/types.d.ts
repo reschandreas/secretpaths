@@ -25,6 +25,11 @@ export interface GraphEntry {
 	children: GraphEntry[];
 }
 
+export interface CompressedGraphEntry {
+	prefix: string;
+	children?: CompressedGraphEntry[];
+}
+
 export interface Information {
 	version: string;
 	vaultAddress: string;

@@ -71,8 +71,14 @@ func recursivelyGetPaths(ctx context.Context, client *vault.Client, path, kvEngi
 	return secrets, err
 }
 
-func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, kvEngine string) ([]models.GraphEntry, error) {
+func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, kvEngine string, stopAtRecursion int) ([]models.GraphEntry, error) {
 	response, err := client.Secrets.KvV2List(ctx, path, vault.WithMountPath(kvEngine))
+	if stopAtRecursion == 0 {
+		return []models.GraphEntry{}, nil
+	}
+	if stopAtRecursion > 0 {
+		stopAtRecursion--
+	}
 	if err != nil {
 		var responseError *vault.ResponseError
 		errors.As(err, &responseError)
@@ -89,7 +95,7 @@ func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, k
 			secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: id, Name: subPath})
 			continue
 		}
-		subSecrets, err := recursivelyGetGraphPaths(ctx, client, path+subPath, kvEngine)
+		subSecrets, err := recursivelyGetGraphPaths(ctx, client, path+subPath, kvEngine, stopAtRecursion)
 		if err != nil {
 			log.Default().Println("error listing paths of ", path+subPath)
 			continue
@@ -117,7 +123,7 @@ func GetPaths(ctx context.Context, client *vault.Client) ([]models.Secret, error
 	return secrets, err
 }
 
-func getGraphPaths(ctx context.Context, client *vault.Client) (models.GraphEntry, error) {
+func getGraphPaths(ctx context.Context, client *vault.Client, stopAtRecursion int) (models.GraphEntry, error) {
 	kvEngine := "secret"
 
 	val, ok := os.LookupEnv("VAULT_KV_ENGINE")
@@ -125,7 +131,7 @@ func getGraphPaths(ctx context.Context, client *vault.Client) (models.GraphEntry
 		kvEngine = val
 	}
 
-	secrets, err := recursivelyGetGraphPaths(ctx, client, "/", kvEngine)
+	secrets, err := recursivelyGetGraphPaths(ctx, client, "/", kvEngine, stopAtRecursion)
 	if err != nil {
 		log.Println(err)
 	}
