@@ -44,7 +44,7 @@ func healthz(c *gin.Context) {
 
 func info(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"version":      "0.0.1",
+		"version":      "0.0.2",
 		"vaultAddress": os.Getenv("VAULT_ADDR"),
 		"kvEngine":     os.Getenv("VAULT_KV_ENGINE"),
 	})
@@ -66,27 +66,6 @@ func getPaths(c *gin.Context) {
 			log.Println(err)
 		}
 		cache.Set("paths", paths)
-		c.IndentedJSON(http.StatusOK, paths)
-	}
-}
-
-func getGraph(c *gin.Context) {
-	cache := c.MustGet("cache").(otter.Cache[string, any])
-	if cache.Has("graph") {
-		var paths, _ = cache.Get("graph")
-		c.IndentedJSON(http.StatusOK, paths)
-	} else {
-		ctx := context.Background()
-		client, err := backend.AutoAuth(ctx)
-		if err != nil {
-			log.Printf("error: %v", err)
-		}
-		paths, err := getGraphPaths(ctx, client, -1)
-		if err != nil {
-			log.Println(err)
-		}
-
-		cache.Set("graph", paths)
 		c.IndentedJSON(http.StatusOK, paths)
 	}
 }
@@ -282,6 +261,7 @@ func getAnnotatedSecrets(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, analyzedSecret)
 	} else {
 		response, _ := annotateSecrets(context.Background(), cache)
+		cache.Set("annotatedSecrets", response)
 		c.IndentedJSON(http.StatusOK, response)
 	}
 }
@@ -312,6 +292,12 @@ func UpdateCaches(c *gin.Context) {
 	}
 	compressedGraph, _ := getCompressedGraph(context.Background(), client)
 	cache.Set("compressed-graph", compressedGraph)
+	annotatedSecrets, _ := annotateSecrets(context.Background(), cache)
+	cache.Set("annotatedSecrets", annotatedSecrets)
+	paths, err := GetPaths(c, client)
+	if err != nil {
+		cache.Set("paths", paths)
+	}
 }
 
 func callUpdateEndpoint() (map[string]interface{}, error) {
