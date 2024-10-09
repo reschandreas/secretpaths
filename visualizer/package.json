@@ -43,7 +43,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@floating-ui/dom": "1.6.10",
+		"@floating-ui/dom": "1.6.11",
 		"@types/d3": "^7.4.3",
 		"d3": "^7.9.0",
 		"d3-scale": "^4.0.2",
