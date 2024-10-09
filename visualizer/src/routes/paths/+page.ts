@@ -11,6 +11,6 @@ export const load = async ({ fetch }) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			return error(500, 'Failed to fetch paths');
+			// return error(500, 'Failed to fetch paths');
 		});
 };

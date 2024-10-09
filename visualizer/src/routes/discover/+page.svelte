@@ -38,8 +38,8 @@
 		const stations: SubwayStation[] = [];
 		children.forEach((child) => {
 			// console.log(child);
-			let wholePath = "/" + child.prefix;
-			if (path !== "/") {
+			let wholePath = '/' + child.prefix;
+			if (path !== '/') {
 				wholePath = path + wholePath;
 			}
 			stations.push({

@@ -237,7 +237,7 @@
 				y_offset += node_height + node.height;
 			});
 			levelBundles.forEach((bundle: Bundle) => {
-				let max_x: number  = bundle.parent.x;
+				let max_x: number = bundle.parent.x;
 				if (max_x < 0) {
 					max_x = 0;
 				}
@@ -318,22 +318,21 @@
 		const nodes: Node[][] = [];
 
 		data.forEach((stations: SubwayStation[]) => {
-				let previousLevel: Node[] = [];
-				if (nodes.length > 0) {
-					previousLevel = nodes[nodes.length - 1];
-				}
-				nodes.push(
-					stations.map((station: SubwayStation) => {
-						let parent: Node | undefined = undefined;
-						if (previousLevel) {
-							parent = previousLevel.find((node: Node) => node.data.id === station.parent);
-						}
-						return ({ data: station, level: station.level, parent: parent }) as Node;
-					})
-				);
-				flatNodes.push(...nodes[nodes.length - 1]);
+			let previousLevel: Node[] = [];
+			if (nodes.length > 0) {
+				previousLevel = nodes[nodes.length - 1];
 			}
-		);
+			nodes.push(
+				stations.map((station: SubwayStation) => {
+					let parent: Node | undefined = undefined;
+					if (previousLevel) {
+						parent = previousLevel.find((node: Node) => node.data.id === station.parent);
+					}
+					return { data: station, level: station.level, parent: parent } as Node;
+				})
+			);
+			flatNodes.push(...nodes[nodes.length - 1]);
+		});
 		const levels: Level[] = nodes.map((n: Node[]) => ({ nodes: n, bundles: [], length: n.length }));
 
 		return constructTangleLayout(levels, flatNodes);
@@ -456,27 +455,27 @@
 		{/if}
 		<svg width={tangleLayout.layout.width} height={tangleLayout.layout.height} class="z-0">
 			<style>
-          text {
-              font-family: 'Roboto Mono Thin', sans-serif;
-              font-weight: lighter;
-              font-size: 15px;
-          }
+				text {
+					font-family: 'Roboto Mono Thin', sans-serif;
+					font-weight: lighter;
+					font-size: 15px;
+				}
 
-          .node {
-              stroke-linecap: round;
-          }
+				.node {
+					stroke-linecap: round;
+				}
 
-          .highlight {
-              stroke-width: 7px;
-          }
+				.highlight {
+					stroke-width: 7px;
+				}
 
-          .inner-dot-highlight {
-              stroke-width: 7px;
-          }
+				.inner-dot-highlight {
+					stroke-width: 7px;
+				}
 
-          .outer-dot-highlight {
-              stroke-width: 15px;
-          }
+				.outer-dot-highlight {
+					stroke-width: 15px;
+				}
 			</style>
 			{#each tangleLayout.bundles as b, i}
 				{#each b.links as link}

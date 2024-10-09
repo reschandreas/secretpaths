@@ -14,16 +14,32 @@
 	//include dev-interceptor.ts and execute it
 	import './dev-interceptor.ts';
 
-
 	hljs.registerLanguage('xml', xml); // for HTML
 	hljs.registerLanguage('css', css);
 	hljs.registerLanguage('javascript', javascript);
 	hljs.registerLanguage('typescript', typescript);
 	storeHighlightJs.set(hljs);
 
+	$: information = undefined;
+
+	async function loadInformation() {
+		try {
+			const res = await fetch(`/v1/info`);
+			information = await res.json();
+		} catch (err) {
+			console.error(err);
+		}
+	}
+
+	onMount(() => {
+		loadInformation();
+	});
+
 	// Floating UI for Popups
 	import { computePosition, autoUpdate, flip, shift, offset, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
+	import { onMount } from 'svelte';
+
 	storePopup.set({ computePosition, autoUpdate, flip, shift, offset, arrow });
 </script>
 
@@ -34,6 +50,13 @@
 		<AppBar>
 			<svelte:fragment slot="lead">
 				<a href="/"><strong class="text-xl uppercase">Secretpaths</strong></a>
+				{#if information && information.vaultAddress}
+					<div class="text-gray-400">&nbsp;of&nbsp;</div><a class="text-gray-400" target="_blank" href="{information.vaultAddress}">{information.vaultAddress}</a>
+					{#if true}
+						<div class="text-gray-400">&nbsp; - secret engine: {information.kvEngine}</div>
+					{/if}
+				{/if}
+
 			</svelte:fragment>
 			<svelte:fragment slot="trail">
 				<LightSwitch />

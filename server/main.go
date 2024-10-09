@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/go-co-op/gocron/v2"
+	"github.com/hashicorp/vault-client-go"
 	"github.com/maypok86/otter"
 	"log"
 	"net/http"
@@ -149,36 +151,42 @@ func compressedGraphLevel(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, root)
 }
 
+func getCompressedGraph(ctx context.Context, client *vault.Client) (models.CompressedGraphEntry, error) {
+	paths, err := getGraphPaths(ctx, client, -1)
+	if err != nil {
+		log.Println(err)
+	}
+
+	root := models.CompressedGraphEntry{
+		Prefix:   paths.AbsolutePath,
+		Children: []models.CompressedGraphEntry{},
+	}
+
+	for _, path := range paths.Children {
+		root.Children = append(root.Children, models.CompressedGraphEntry{
+			Prefix:   path.Name,
+			Children: appendChildren(ctx, path.AbsolutePath, path, -1),
+		})
+	}
+	return root, nil
+}
+
 func compressedGraph(c *gin.Context) {
 	ctx := context.Background()
 	client, err := backend.AutoAuth(ctx)
 	cache := c.MustGet("cache").(otter.Cache[string, any])
 
-	if cache.Has("new") {
-		var paths, _ = cache.Get("new")
+	if err != nil {
+		log.Printf("error: %v", err)
+	}
+
+	if cache.Has("compressed-graph") {
+		var paths, _ = cache.Get("compressed-graph")
 		c.IndentedJSON(http.StatusOK, paths)
 	} else {
-		if err != nil {
-			log.Printf("error: %v", err)
-		}
-		paths, err := getGraphPaths(ctx, client, -1)
-		if err != nil {
-			log.Println(err)
-		}
-
-		root := models.CompressedGraphEntry{
-			Prefix:   paths.AbsolutePath,
-			Children: []models.CompressedGraphEntry{},
-		}
-
-		for _, path := range paths.Children {
-			root.Children = append(root.Children, models.CompressedGraphEntry{
-				Prefix:   path.Name,
-				Children: appendChildren(ctx, path.AbsolutePath, path, -1),
-			})
-		}
-		cache.Set("new", root)
-		c.IndentedJSON(http.StatusOK, root)
+		compressedGraph, _ := getCompressedGraph(ctx, client)
+		cache.Set("compressed-graph", compressedGraph)
+		c.IndentedJSON(http.StatusOK, compressedGraph)
 	}
 }
 
@@ -207,8 +215,8 @@ func appendChildren(ctx context.Context, prefix string, nodes models.GraphEntry,
 func getAnnotatedSecret(c *gin.Context) {
 	path := c.Query("path")
 	cache := c.MustGet("cache").(otter.Cache[string, any])
-	if !cache.Has("analyzedSecrets") {
-		_, err := analyzeSecrets(context.Background(), cache)
+	if !cache.Has("annotatedSecrets") {
+		_, err := annotateSecrets(context.Background(), cache)
 		if err != nil {
 			return
 		}
@@ -221,7 +229,7 @@ func getAnnotatedSecret(c *gin.Context) {
 	}
 }
 
-func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnnotatedSecret, error) {
+func annotateSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]models.AnnotatedSecret, error) {
 	client, err := backend.AutoAuth(ctx)
 	if err != nil {
 		log.Printf("could not authenticate: %v", err)
@@ -263,17 +271,17 @@ func analyzeSecrets(ctx context.Context, cache otter.Cache[string, any]) ([]mode
 		analyzedPaths = append(analyzedPaths, models.AnnotatedSecret{Path: path, Policies: accessiblePolicies})
 	}
 
-	cache.Set("analyzedSecrets", analyzedPaths)
+	cache.Set("annotatedSecrets", analyzedPaths)
 	return analyzedPaths, nil
 }
 
 func getAnnotatedSecrets(c *gin.Context) {
 	cache := c.MustGet("cache").(otter.Cache[string, any])
-	if cache.Has("analyzedSecrets") {
-		var analyzedSecret, _ = cache.Get("analyzedSecrets")
+	if cache.Has("annotatedSecrets") {
+		var analyzedSecret, _ = cache.Get("annotatedSecrets")
 		c.IndentedJSON(http.StatusOK, analyzedSecret)
 	} else {
-		response, _ := analyzeSecrets(context.Background(), cache)
+		response, _ := annotateSecrets(context.Background(), cache)
 		c.IndentedJSON(http.StatusOK, response)
 	}
 }
@@ -295,8 +303,34 @@ func CacheProvider() gin.HandlerFunc {
 	}
 }
 
+func UpdateCaches(c *gin.Context) {
+	log.Printf("updating caches")
+	cache := c.MustGet("cache").(otter.Cache[string, any])
+	client, err := backend.AutoAuth(context.Background())
+	if err != nil {
+		log.Printf("error: %v", err)
+	}
+	compressedGraph, _ := getCompressedGraph(context.Background(), client)
+	cache.Set("compressed-graph", compressedGraph)
+}
+
+func callUpdateEndpoint() (map[string]interface{}, error) {
+	// Create a request to the /hello endpoint
+	resp, err := http.Get("http://localhost:8081/update")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Decode the JSON response
+	var response map[string]interface{}
+
+	return response, nil
+}
+
 func main() {
 	router := gin.New()
+	scheduler, err := gocron.NewScheduler()
 	router.Use(
 		gin.LoggerWithWriter(gin.DefaultWriter, "/v1/healthz"),
 		gin.Recovery(),
@@ -314,14 +348,26 @@ func main() {
 	router.GET("/v1/info", info)
 	router.GET("/v1/healthz", healthz)
 	router.GET("/v1/paths", getPaths)
-	router.GET("/v1/graph", getGraph)
 	router.GET("/v1/level", compressedGraphLevel)
-	router.GET("/v1/new", compressedGraph)
+	router.GET("/v1/graph", compressedGraph)
 	router.GET("/v1/policies", getPolicies)
 	router.GET("/v1/annotated", getAnnotatedSecret)
 	router.GET("/v1/annotatedSecrets", getAnnotatedSecrets)
+	router.GET("/update", func(c *gin.Context) {
+		UpdateCaches(c)
+	})
 
-	err := router.Run(":8081")
+	job, err := scheduler.NewJob(
+		gocron.DurationJob(
+			3*time.Minute,
+		),
+		gocron.NewTask(callUpdateEndpoint),
+	)
+
+	log.Printf("job: %v", job)
+	scheduler.Start()
+
+	err = router.Run(":8081")
 	if err != nil {
 		return
 	}
