@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   secretpaths:
   - apiVersion: v2
+    appVersion: v0.0.2
+    created: "2024-10-10T05:09:30.518570634Z"
+    description: Helm chart for secretpaths, visualizing your vault secrets
+    digest: 3020028b949c9a7adb24ab4a53ea92c2a803952ba9390d151a82e00933152d2b
+    name: secretpaths
+    type: application
+    urls:
+    - https://github.com/reschandreas/secretpaths/releases/download/secretpaths-0.1.1/secretpaths-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
     appVersion: v0.0.1
     created: "2024-08-18T19:20:38.373540012Z"
     description: Helm chart for secretpaths, visualizing your vault secrets
@@ -11,4 +21,4 @@ entries:
     urls:
     - https://github.com/reschandreas/secretpaths/releases/download/secretpaths-0.1.0/secretpaths-0.1.0.tgz
     version: 0.1.0
-generated: "2024-08-18T19:20:38.373570971Z"
+generated: "2024-10-10T05:09:30.51857904Z"
