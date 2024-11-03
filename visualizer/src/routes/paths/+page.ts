@@ -1,5 +1,3 @@
-import { error } from '@sveltejs/kit';
-
 /** @type {import('../$types').Path[]} */
 export const load = async ({ fetch }) => {
 	return await fetch('/v1/annotatedSecrets')

@@ -43,10 +43,14 @@ func healthz(c *gin.Context) {
 }
 
 func info(c *gin.Context) {
+	engine := os.Getenv("VAULT_KV_ENGINE")
+	if engine == "" {
+		engine = "secret"
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"version":      "0.0.2",
 		"vaultAddress": os.Getenv("VAULT_ADDR"),
-		"kvEngine":     os.Getenv("VAULT_KV_ENGINE"),
+		"kvEngine":     engine,
 	})
 }
 
