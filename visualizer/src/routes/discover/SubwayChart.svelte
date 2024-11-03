@@ -21,7 +21,6 @@
 		level: number;
 		bundle?: Bundle;
 		bundles: Bundles;
-		children_bundles?: Map<string, ChildrenBundles>;
 		bundlesKeys?: string[];
 		links?: Link[];
 		height: number;
@@ -31,15 +30,8 @@
 		xt: number;
 		yt: number;
 		ys: number;
-		c1: number;
-		c2: number;
 		xb: number;
 		xs: number;
-	}
-
-	interface ChildrenBundles {
-		bundles: Bundle[];
-		i: number;
 	}
 
 	interface Bundle {
@@ -71,8 +63,6 @@
 		y_target: number;
 		y_bundle: number;
 		y_source: number;
-		c1: number;
-		c2: number;
 		x_bundle: number;
 		x_source: number;
 	}
@@ -93,23 +83,21 @@
 	const bundle_width = 14;
 	const level_y_padding = 16;
 	const metro_d = 4;
+	const half_metro_d = metro_d / 2;
 	const min_family_height = 22;
 	let show = data.length < 4;
 	let highlightedNode: string | undefined = undefined;
 
+	const d3Color = d3.scaleOrdinal(d3.schemeDark2);
+
+	options.c ||= 16;
+	const c = options.c;
+	options.bigc ||= node_width + c;
+
 	const paths: Map<string, string[]> = new Map();
 	let allIds: Set<string> = new Set();
 
-	const populateNodeMap = (nodes: Node[]) => {
-		const nodes_index: Map<string, Node> = new Map();
-		nodes.forEach((node: Node) => {
-			nodes_index.set(node.data.id, node);
-		});
-		return nodes_index;
-	};
-
 	const constructTangleLayout = (levels: Level[], nodes: Node[]) => {
-		const nodesMap: Map<string, Node> = populateNodeMap(nodes);
 		const bundlesMap: Map<string, Bundle> = new Map();
 
 		// precompute bundles
@@ -148,16 +136,11 @@
 		const links: Link[] = [];
 
 		nodes.forEach((node: Node) => {
-			let parent = node.parent;
-			if (parent === undefined) {
-				return;
-			}
 			if (node.bundle === undefined) {
 				return;
 			}
+			let parent = node.parent;
 			const link: Link = {
-				c1: 0,
-				c2: 0,
 				x_bundle: 0,
 				x_source: 0,
 				x_target: 0,
@@ -168,9 +151,12 @@
 				bundle: node.bundle,
 				target: parent
 			};
-			const pathsToHere = paths.get(node.data.id) || [];
-			pathsToHere.push(parent.data.id);
+			const pathsToHere = paths.get(node.data.id) || [parent.data.id];
 			paths.set(node.data.id, pathsToHere);
+			const linkBundle: Bundle | undefined = bundlesMap.get(link.bundle.id);
+			if (linkBundle) {
+				linkBundle.links.push(link);
+			}
 			links.push(link);
 		});
 
@@ -190,75 +176,32 @@
 
 		const bundles: Bundle[] = Array.from(bundlesMap.values());
 
-		nodes.forEach((node: Node) => {
-			if (node.children_bundles !== undefined) {
-				const children: Bundle[][] = Array.from(node.children_bundles.keys()).map(
-					(key: string) => node.children_bundles?.get(key)?.bundles || []
-				);
-				node.bundles = { bundles: children, i: 0 };
-			} else {
-				node.children_bundles = new Map<string, ChildrenBundles>();
-				node.bundles = { bundles: [], i: 0 };
-			}
-
-			node.bundles.bundles.sort((a: Bundle[], b: Bundle[]) =>
-				d3.descending(
-					d3.max(a, (d) => d.span),
-					d3.max(b, (d) => d.span)
-				)
-			);
-			node.bundles.bundles.forEach((b: Bundle[], i) => (b.i = i));
-			node.height = (Math.max(1, node.bundles.bundles.length) - 1) * metro_d;
-		});
-
-		links.forEach((link: Link) => {
-			const linkBundle: Bundle | undefined = bundlesMap.get(link.bundle.id);
-			if (linkBundle) {
-				linkBundle.links.push(link);
-			}
-		});
-
-		options.c ||= 16;
-		const c = options.c;
-		options.bigc ||= node_width + c;
-
 		let x_offset = padding;
 		let y_offset = padding;
 
 		let i = 0;
+
 		levels.forEach((level: Level) => {
 			const levelBundles: Bundle[] = bundles.filter((b) => b.level === level.nodes[0].level);
 			x_offset += levelBundles.length * bundle_width;
 			y_offset += level_y_padding;
 			level.nodes.forEach((node: Node) => {
 				node.x = node.level * node_width + x_offset;
-				node.y = node_height + y_offset + node.height / 2;
-
-				y_offset += node_height + node.height;
+				node.y = node_height + y_offset;
+				y_offset += node_height;
 			});
 			levelBundles.forEach((bundle: Bundle) => {
-				let max_x: number = bundle.parent.x;
-				if (max_x < 0) {
-					max_x = 0;
-				}
-				bundle.x = max_x + node_width + (levelBundles.length - 1 - bundle.i) * bundle_width;
+				bundle.x = bundle.parent.x + node_width + (levelBundles.length - 1 - bundle.i) * bundle_width;
 				bundle.y = i * node_height;
 			});
 			i += level.length;
 		});
 
 		links.forEach((link: Link) => {
-			if (link.target.children_bundles === undefined || !bundlesMap.has(link.bundle.id)) {
-				return;
-			}
 			const linkBundle: Bundle = bundlesMap.get(link.bundle.id) as Bundle;
 
 			link.x_target = link.target.x;
-			link.y_target =
-				link.target.y +
-				linkBundle.i * metro_d -
-				(link.target.bundles.bundles.length * metro_d) / 2 +
-				metro_d / 2;
+			link.y_target = link.target.y + linkBundle.i * metro_d - half_metro_d;
 			link.x_bundle = linkBundle.x;
 			link.y_bundle = linkBundle.y;
 			link.x_source = link.source.x;
@@ -279,24 +222,10 @@
 		});
 
 		links.forEach((link: Link) => {
-			if (link.target.children_bundles === undefined) {
-				return;
-			}
-			const targetBundleOffset: number = link.target.children_bundles.get(link.bundle.id)?.i || 0;
-
-			const c1 =
-				link.source.level - link.target.level > 1
-					? Math.min(options.bigc, link.x_bundle - link.x_target, link.y_bundle - link.y_target) - c
-					: c;
-			link.y_target =
-				link.target.y +
-				targetBundleOffset * metro_d -
-				(link.target.bundles.bundles.length * metro_d) / 2 +
-				metro_d / 2;
+			link.y_target = link.target.y - half_metro_d;
 			link.y_source = link.source.y;
-			link.c1 = c1;
-			link.c2 = c;
 		});
+
 		const maxWidth: number = d3.max(nodes, (node) => node.x) || 0;
 		const maxHeight: number = d3.max(nodes, (node) => node.y) || 0;
 		const layout = {
@@ -309,9 +238,8 @@
 			metro_d
 		};
 
-		return { levels, nodes, nodes_index: nodesMap, links, bundles, layout };
+		return { nodes, bundles, layout };
 	};
-	let d3Color = d3.scaleOrdinal(d3.schemeDark2);
 	const color = (_: Bundle, i: number) => d3Color(i.toString());
 	const renderChart = (data: SubwayStation[][]) => {
 		const flatNodes: Node[] = [];
@@ -328,7 +256,7 @@
 					if (previousLevel) {
 						parent = previousLevel.find((node: Node) => node.data.id === station.parent);
 					}
-					return { data: station, level: station.level, parent: parent } as Node;
+					return { data: station, level: station.level, parent: parent, height: 0 } as Node;
 				})
 			);
 			flatNodes.push(...nodes[nodes.length - 1]);
@@ -479,32 +407,28 @@
 			</style>
 			{#each tangleLayout.bundles as b, i}
 				{#each b.links as link}
-					{#if !isNaN(link.c1)}
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-gray dark:stroke-black"
 							in:draw|global={{ duration: 250, delay: i * 50 }}
-							d="
-							M{link.x_target} {link.y_target}
-							L{link.x_bundle - link.c1} {link.y_target}
-							A{link.c1} {link.c1} 90 0 1 {link.x_bundle} {link.y_target + link.c1}
-							L{link.x_bundle} {link.y_source - link.c2}
-							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
+							d="M{link.x_target} {link.y_target + 2}
+							L{link.x_bundle - c} {link.y_target + 2}
+							A{c} {c} 90 0 1 {link.x_bundle} {link.y_target + 2 + c}
+							L{link.x_bundle} {link.y_source - c}
+							A{c} {c} 90 0 0 {link.x_bundle + c} {link.y_source}
 							L{link.x_source} {link.y_source}"
 							stroke-width="5"
 						/>
 						<path
 							class="fill-none belongs-to-{link.source.data.id} stroke-2"
 							in:draw|global={{ duration: 250, delay: i * 50 }}
-							d="
-							M{link.x_target} {link.y_target}
-							L{link.x_bundle - link.c1} {link.y_target}
-							A{link.c1} {link.c1} 90 0 1 {link.x_bundle} {link.y_target + link.c1}
-							L{link.x_bundle} {link.y_source - link.c2}
-							A{link.c2} {link.c2} 90 0 0 {link.x_bundle + link.c2} {link.y_source}
+							d="M{link.x_target} {link.y_target + 2}
+							L{link.x_bundle - c} {link.y_target + 2}
+							A{c} {c} 90 0 1 {link.x_bundle} {link.y_target + 2 + c}
+							L{link.x_bundle} {link.y_source - c}
+							A{c} {c} 90 0 0 {link.x_bundle + c} {link.y_source}
 							L{link.x_source} {link.y_source}"
 							stroke={color(b, i)}
 						/>
-					{/if}
 				{/each}
 			{/each}
 			{#each tangleLayout.nodes as node, i}
