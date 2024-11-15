@@ -7,7 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-co-op/gocron/v2 v2.12.3
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/hcl/v2 v2.22.0
+	github.com/hashicorp/hcl/v2 v2.23.0
 	github.com/hashicorp/vault-client-go v0.4.3
 	github.com/maypok86/otter v1.2.3
 	github.com/tjarratt/babble v0.0.0-20210505082055-cbca2a4833c1
