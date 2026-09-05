@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute Tag
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         id: compute-tag
         with:
           result-encoding: string
