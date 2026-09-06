@@ -24,7 +24,7 @@
 		"@types/eslint": "^9.6.1",
 		"@types/lodash": "^4.17.13",
 		"@types/node": "24.13.3",
-		"autoprefixer": "10.5.4",
+		"autoprefixer": "10.5.5",
 		"eslint": "^10.0.0",
 		"eslint-config-prettier": "^10.0.0",
 		"eslint-plugin-svelte": "^3.0.0",
