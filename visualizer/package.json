@@ -23,7 +23,7 @@
 		"@tailwindcss/typography": "0.5.20",
 		"@types/eslint": "^9.6.1",
 		"@types/lodash": "^4.17.13",
-		"@types/node": "24.13.4",
+		"@types/node": "24.13.5",
 		"autoprefixer": "10.6.0",
 		"eslint": "^10.0.0",
 		"eslint-config-prettier": "^10.0.0",
