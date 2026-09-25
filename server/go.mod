@@ -1,11 +1,11 @@
 module secretpaths
 
-go 1.25.0
+go 1.26.0
 
 toolchain go1.27.1
 
 require (
-	github.com/gin-contrib/cors v1.7.8
+	github.com/gin-contrib/cors v1.7.9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/google/uuid v1.6.0
@@ -60,7 +60,7 @@ require (
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.8.0 // indirect
 	golang.org/x/arch v0.29.0 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
