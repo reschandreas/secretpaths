@@ -61,7 +61,6 @@
 	};
 
 	compressedToSubway(newData, newData.prefix);
-
 </script>
 
 <div class="p-5 w-full h-full">

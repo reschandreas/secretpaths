@@ -1,6 +1,6 @@
 <script lang="ts">
+	/* eslint-disable svelte/prefer-svelte-reactivity */
 	import * as d3 from 'd3';
-	import type { Element } from 'svelte/types/compiler/interfaces';
 	import { draw, fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { ProgressBar } from '@skeletonlabs/skeleton';
@@ -191,7 +191,8 @@
 				y_offset += node_height;
 			});
 			levelBundles.forEach((bundle: Bundle) => {
-				bundle.x = bundle.parent.x + node_width + (levelBundles.length - 1 - bundle.i) * bundle_width;
+				bundle.x =
+					bundle.parent.x + node_width + (levelBundles.length - 1 - bundle.i) * bundle_width;
 				bundle.y = i * node_height;
 			});
 			i += level.length;
@@ -311,7 +312,7 @@
 			return;
 		}
 		const target: Element = e.currentTarget as unknown as Element;
-		const id: string = target.getAttribute('data-id');
+		const id: string = target.getAttribute('data-id') ?? '';
 		getFocusedElements(id).forEach((p: HTMLCollection) => {
 			for (let element of p) {
 				if (element.tagName === 'text') {
@@ -336,7 +337,7 @@
 		if (!e.target) {
 			return;
 		}
-		const id: string = (e.currentTarget as unknown as Element).getAttribute('data-id');
+		const id: string = (e.currentTarget as unknown as Element).getAttribute('data-id') ?? '';
 		if (!id) {
 			return;
 		}
@@ -352,7 +353,7 @@
 			return;
 		}
 		const target: Element = e.currentTarget as unknown as Element;
-		const id: string = target.getAttribute('data-id');
+		const id: string = target.getAttribute('data-id') ?? '';
 		getFocusedElements(id).forEach((p: HTMLCollection) => {
 			for (let element of p) {
 				if (element.tagName === 'text') {
@@ -405,33 +406,33 @@
 					stroke-width: 15px;
 				}
 			</style>
-			{#each tangleLayout.bundles as b, i}
-				{#each b.links as link}
-						<path
-							class="fill-none belongs-to-{link.source.data.id} stroke-gray dark:stroke-black"
-							in:draw|global={{ duration: 250, delay: i * 50 }}
-							d="M{link.x_target} {link.y_target + 2}
+			{#each tangleLayout.bundles as b, i (i)}
+				{#each b.links as link, j (j)}
+					<path
+						class="fill-none belongs-to-{link.source.data.id} stroke-gray dark:stroke-black"
+						in:draw|global={{ duration: 250, delay: i * 50 }}
+						d="M{link.x_target} {link.y_target + 2}
 							L{link.x_bundle - c} {link.y_target + 2}
 							A{c} {c} 90 0 1 {link.x_bundle} {link.y_target + 2 + c}
 							L{link.x_bundle} {link.y_source - c}
 							A{c} {c} 90 0 0 {link.x_bundle + c} {link.y_source}
 							L{link.x_source} {link.y_source}"
-							stroke-width="5"
-						/>
-						<path
-							class="fill-none belongs-to-{link.source.data.id} stroke-2"
-							in:draw|global={{ duration: 250, delay: i * 50 }}
-							d="M{link.x_target} {link.y_target + 2}
+						stroke-width="5"
+					/>
+					<path
+						class="fill-none belongs-to-{link.source.data.id} stroke-2"
+						in:draw|global={{ duration: 250, delay: i * 50 }}
+						d="M{link.x_target} {link.y_target + 2}
 							L{link.x_bundle - c} {link.y_target + 2}
 							A{c} {c} 90 0 1 {link.x_bundle} {link.y_target + 2 + c}
 							L{link.x_bundle} {link.y_source - c}
 							A{c} {c} 90 0 0 {link.x_bundle + c} {link.y_source}
 							L{link.x_source} {link.y_source}"
-							stroke={color(b, i)}
-						/>
+						stroke={color(b, i)}
+					/>
 				{/each}
 			{/each}
-			{#each tangleLayout.nodes as node, i}
+			{#each tangleLayout.nodes as node, i (i)}
 				<!-- little dot-->
 				<path
 					class="selectable node outer-dot belongs-to-{node.data.id} stroke-black dark:stroke-white"

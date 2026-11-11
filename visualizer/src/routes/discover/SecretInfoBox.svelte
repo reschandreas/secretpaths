@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve */
 	import { ProgressBar } from '@skeletonlabs/skeleton';
 	import type { Information } from '../../types';
 
@@ -28,7 +29,7 @@
 	<div class="p-4 space-y-4">
 		<section class="mt-2 ml-4 mr-4 min-h-20 max-h-20">
 			<ol class="breadcrumb mt-1 flex-wrap">
-				{#each splitPath as crumb, index}
+				{#each splitPath as crumb, index (index)}
 					{#if crumb === ''}
 						<li class="crumb">/</li>
 					{:else}
@@ -48,7 +49,7 @@
 		{:else}
 			<p>The following policies can access this secret:</p>
 			<ul>
-				{#each policies as policy}
+				{#each policies as policy (policy)}
 					<li>{policy}</li>
 				{/each}
 			</ul>
@@ -56,6 +57,7 @@
 	</div>
 	<hr class="opacity-50" />
 	<footer class="p-4 flex justify-start items-center space-x-4">
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 		<a
 			href="{information.vaultAddress}/ui/vault/secrets/{information.kvEngine}/show{secret}"
 			target="_blank"

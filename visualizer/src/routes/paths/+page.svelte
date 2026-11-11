@@ -2,6 +2,7 @@
 	import { Paginator, type PaginationSettings } from '@skeletonlabs/skeleton';
 	import SecretCard from './SecretCard.svelte';
 	import type { AnnotatedSecret } from '../../types';
+	import { filterSecrets } from '$lib/filter';
 
 	/** @type {import('../$types').PageData} */
 	export let data;
@@ -17,12 +18,10 @@
 
 	let input = '';
 
-	$: paginatedSource = secrets
-		.filter((p) => p.path.path.includes(input))
-		.slice(
-			pagination.page * pagination.limit,
-			pagination.page * pagination.limit + pagination.limit
-		);
+	$: paginatedSource = filterSecrets(secrets, input).slice(
+		pagination.page * pagination.limit,
+		pagination.page * pagination.limit + pagination.limit
+	);
 </script>
 
 <div class="container h-full w-full mx-auto flex-col justify-center">
@@ -39,7 +38,7 @@
 	<div>
 		{#key paginatedSource}
 			<div class="grid grid-cols-3 grid-rows-4 grid-flow-col gap-4">
-				{#each paginatedSource as path}
+				{#each paginatedSource as path (path.path?.path ?? path)}
 					<SecretCard secret={path} />
 				{/each}
 			</div>

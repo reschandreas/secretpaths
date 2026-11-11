@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/hashicorp/vault-client-go"
+	"golang.org/x/sync/errgroup"
 	"log"
 	"os"
 	"secretpaths/models"
@@ -17,21 +18,42 @@ func GetPolicies(ctx context.Context, client *vault.Client) ([]models.Policy, er
 	if err != nil {
 		log.Default().Println("error listing policies")
 		log.Println(err)
+		return nil, err
 	}
-	var policies = make([]models.Policy, 0)
+	var keys []string
 	for _, rawPolicy := range response.Data.Keys {
 		if rawPolicy == "root" {
-			// skip the root policy, as it is not a real policy
 			continue
 		}
-		policy, err := parsePolicy(ctx, client, rawPolicy)
-		if err != nil {
-			log.Println("could not parse policy", rawPolicy)
-		} else {
-			policies = append(policies, policy)
+		keys = append(keys, rawPolicy)
+	}
+
+	policies := make([]models.Policy, len(keys))
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(16)
+	for i, name := range keys {
+		i, name := i, name
+		g.Go(func() error {
+			policy, err := parsePolicy(gctx, client, name)
+			if err != nil {
+				log.Println("could not parse policy", name)
+				return nil
+			}
+			policies[i] = policy
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	// drop zero values (failed parses)
+	out := policies[:0]
+	for _, p := range policies {
+		if p.Name != "" {
+			out = append(out, p)
 		}
 	}
-	return policies, nil
+	return out, nil
 }
 
 func parsePolicy(ctx context.Context, client *vault.Client, name string) (policy models.Policy, err error) {
@@ -49,62 +71,104 @@ func recursivelyGetPaths(ctx context.Context, client *vault.Client, path, kvEngi
 	if err != nil {
 		var responseError *vault.ResponseError
 		errors.As(err, &responseError)
-		if responseError.StatusCode == 404 {
+		if responseError != nil && responseError.StatusCode == 404 {
 			log.Default().Println("there is nothing at", path)
 			return nil, nil
 		}
 		return nil, err
 	}
+	// First pass: collect direct secrets; collect subdirs to recurse in parallel.
 	var secrets []models.Secret
+	var dirs []string
 	for _, subPath := range response.Data.Keys {
 		if !strings.HasSuffix(subPath, "/") {
 			secrets = append(secrets, models.Secret{Path: path + subPath})
-			continue
+		} else {
+			dirs = append(dirs, subPath)
 		}
-		subSecrets, err := recursivelyGetPaths(ctx, client, path+subPath, kvEngine)
-		if err != nil {
-			log.Default().Println("error listing paths of ", path+subPath)
-			continue
-		}
-		secrets = append(secrets, subSecrets...)
 	}
-	return secrets, err
+
+	results := make([][]models.Secret, len(dirs))
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(16)
+	for i, subPath := range dirs {
+		i, subPath := i, subPath
+		g.Go(func() error {
+			subSecrets, err := recursivelyGetPaths(gctx, client, path+subPath, kvEngine)
+			if err != nil {
+				log.Default().Println("error listing paths of ", path+subPath)
+				return nil
+			}
+			results[i] = subSecrets
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return secrets, err
+	}
+	for _, r := range results {
+		secrets = append(secrets, r...)
+	}
+	return secrets, nil
 }
 
 func recursivelyGetGraphPaths(ctx context.Context, client *vault.Client, path, kvEngine string, stopAtRecursion int) ([]models.GraphEntry, error) {
-	response, err := client.Secrets.KvV2List(ctx, path, vault.WithMountPath(kvEngine))
 	if stopAtRecursion == 0 {
 		return []models.GraphEntry{}, nil
 	}
-	if stopAtRecursion > 0 {
-		stopAtRecursion--
+	nextDepth := stopAtRecursion
+	if nextDepth > 0 {
+		nextDepth--
 	}
+	response, err := client.Secrets.KvV2List(ctx, path, vault.WithMountPath(kvEngine))
 	if err != nil {
 		var responseError *vault.ResponseError
 		errors.As(err, &responseError)
-		if responseError.StatusCode == 404 {
+		if responseError != nil && responseError.StatusCode == 404 {
 			log.Default().Println("there is nothing at", path)
 			return nil, nil
 		}
 		return nil, err
 	}
-	var secrets []models.GraphEntry
+	type dirJob struct {
+		subPath string
+		id      string
+	}
+	var direct []models.GraphEntry
+	var dirs []dirJob
 	for _, subPath := range response.Data.Keys {
 		id := uuid.New().String()
 		if !strings.HasSuffix(subPath, "/") {
-			secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: id, Name: subPath})
-			continue
+			direct = append(direct, models.GraphEntry{AbsolutePath: path + subPath, Id: id, Name: subPath})
+		} else {
+			dirs = append(dirs, dirJob{subPath: subPath, id: id})
 		}
-		subSecrets, err := recursivelyGetGraphPaths(ctx, client, path+subPath, kvEngine, stopAtRecursion)
-		if err != nil {
-			log.Default().Println("error listing paths of ", path+subPath)
-			continue
-		}
-		subPath = strings.Replace(subPath, "/", "", 1)
-		secrets = append(secrets, models.GraphEntry{AbsolutePath: path + subPath, Id: id, Name: subPath, Children: subSecrets})
 	}
-	return secrets, err
 
+	results := make([]models.GraphEntry, len(dirs))
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(16)
+	for i, d := range dirs {
+		i, d := i, d
+		g.Go(func() error {
+			subSecrets, err := recursivelyGetGraphPaths(gctx, client, path+d.subPath, kvEngine, nextDepth)
+			if err != nil {
+				log.Default().Println("error listing paths of ", path+d.subPath)
+				subSecrets = nil
+			}
+			name := strings.Replace(d.subPath, "/", "", 1)
+			results[i] = models.GraphEntry{AbsolutePath: path + name, Id: d.id, Name: name, Children: subSecrets}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	secrets := append([]models.GraphEntry{}, direct...)
+	for _, r := range results {
+		secrets = append(secrets, r)
+	}
+	return secrets, nil
 }
 
 func GetPaths(ctx context.Context, client *vault.Client) ([]models.Secret, error) {

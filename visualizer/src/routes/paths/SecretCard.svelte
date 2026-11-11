@@ -12,7 +12,7 @@
 	<header class="card-header mt-2 h4">{name}</header>
 	<section class="mt-2 ml-4 mr-4 min-h-20 max-h-20">
 		<ol class="breadcrumb mt-1 flex-wrap">
-			{#each splitPath as crumb, index}
+			{#each splitPath as crumb, index (index)}
 				{#if crumb === ''}
 					<li class="crumb">/</li>
 				{:else}

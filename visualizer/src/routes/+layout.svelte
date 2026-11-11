@@ -11,16 +11,13 @@
 	import javascript from 'highlight.js/lib/languages/javascript';
 	import typescript from 'highlight.js/lib/languages/typescript';
 
-	//include dev-interceptor.ts and execute it
-	import './dev-interceptor.ts';
-
 	hljs.registerLanguage('xml', xml); // for HTML
 	hljs.registerLanguage('css', css);
 	hljs.registerLanguage('javascript', javascript);
 	hljs.registerLanguage('typescript', typescript);
 	storeHighlightJs.set(hljs);
 
-	$: information = undefined;
+	let information: { vaultAddress?: string; kvEngine?: string } | undefined;
 
 	async function loadInformation() {
 		try {
@@ -49,14 +46,18 @@
 		<!-- App Bar -->
 		<AppBar>
 			<svelte:fragment slot="lead">
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a href="/"><strong class="text-xl uppercase">Secretpaths</strong></a>
 				{#if information && information.vaultAddress}
-					<div class="text-gray-400">&nbsp;of&nbsp;</div><a class="text-gray-400" target="_blank" href="{information.vaultAddress}">{information.vaultAddress}</a>
+					<div class="text-gray-400">&nbsp;of&nbsp;</div>
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="text-gray-400" target="_blank" href={information.vaultAddress}
+						>{information.vaultAddress}</a
+					>
 					{#if true}
 						<div class="text-gray-400">&nbsp; - secret engine: {information.kvEngine}</div>
 					{/if}
 				{/if}
-
 			</svelte:fragment>
 			<svelte:fragment slot="trail">
 				<LightSwitch />

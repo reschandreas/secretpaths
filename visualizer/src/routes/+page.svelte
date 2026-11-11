@@ -1,5 +1,5 @@
 <script lang="ts">
-
+	/* eslint-disable svelte/infinite-reactive-loop */
 	let input = '';
 
 	let policies: string[] | undefined = undefined;
@@ -24,7 +24,12 @@
 			<div class="card card-hover overflow-hidden p-4">
 				<h6 class="h3 mb-5 font-thin" data-toc-ignore>Quick lookup</h6>
 				<hr class="opacity-50" />
-				<input class="input" type="search" bind:value={input} placeholder="type your secretpath here...">
+				<input
+					class="input"
+					type="search"
+					bind:value={input}
+					placeholder="type your secretpath here..."
+				/>
 				<hr class="opacity-50" />
 				<div class="mt-2 ml-2">
 					{#if policies === undefined}
@@ -34,7 +39,7 @@
 					{:else}
 						<p>The following policies can access this secret:</p>
 						<ul>
-							{#each policies as policy}
+							{#each policies as policy (policy)}
 								<li>{policy}</li>
 							{/each}
 						</ul>
@@ -50,6 +55,7 @@
 				</div>
 				<hr class="opacity-50" />
 				<footer class="p-4 flex justify-start items-center space-x-4">
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a href="/paths">
 						<button type="button" class="btn variant-filled">Go</button>
 					</a>
@@ -63,6 +69,7 @@
 				</div>
 				<hr class="opacity-50" />
 				<footer class="p-4 flex justify-start items-center space-x-4">
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a href="/discover">
 						<button type="button" class="btn variant-filled">Go</button>
 					</a>

@@ -1,4 +1,3 @@
-
 /** @type {import('./$types').Policy[]} */
 export const load = async ({ fetch }) => {
 	return await fetch('/v1/policies')
