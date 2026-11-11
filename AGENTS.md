@@ -21,6 +21,7 @@ Visualizer:
 - `cd visualizer && npm run check` — runs `svelte-kit sync` then `svelte-check`. Always sync first.
 - `cd visualizer && npm run lint` — `prettier --check . && eslint .` (check only).
 - `cd visualizer && npm test` — Vitest unit tests (`src/**/*.test.ts`).
+- `cd visualizer && npm run test:e2e` — Playwright visual regression (`e2e/`); update baselines with `test:e2e:update`.
 - `cd visualizer && npm run format` — `prettier --write .`
 - `cd visualizer && npm run build` — production build.
 

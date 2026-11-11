@@ -1,19 +1,47 @@
 <script lang="ts">
-	/* eslint-disable svelte/infinite-reactive-loop */
 	let input = '';
-
 	let policies: string[] | undefined = undefined;
+	let loading = false;
+	let error: string | undefined = undefined;
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-	$: if (input) {
-		fetch(`/v1/annotated?path=${input.startsWith('/') ? input : '/' + input}`)
-			.then((res) => res.json())
+	function lookup(value: string) {
+		if (!value) {
+			policies = undefined;
+			error = undefined;
+			return;
+		}
+		loading = true;
+		error = undefined;
+		const path = value.startsWith('/') ? value : '/' + value;
+		fetch(`/v1/annotated?path=${encodeURIComponent(path)}`)
+			.then((res) => {
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+				return res.json();
+			})
 			.then((data) => {
-				policies = data;
-				console.log(data);
+				policies = Array.isArray(data) ? data : (data?.policies ?? []);
 			})
 			.catch((err) => {
-				console.error(err);
+				error = String(err);
+				policies = undefined;
+			})
+			.finally(() => {
+				loading = false;
 			});
+	}
+
+	$: {
+		clearTimeout(debounceTimer);
+		const v = input;
+		// eslint-disable-next-line no-useless-assignment
+		debounceTimer = setTimeout(() => lookup(v), 300);
+	}
+
+	function clearInput() {
+		input = '';
+		policies = undefined;
+		error = undefined;
 	}
 </script>
 
@@ -24,25 +52,44 @@
 			<div class="card card-hover overflow-hidden p-4">
 				<h6 class="h3 mb-5 font-thin" data-toc-ignore>Quick lookup</h6>
 				<hr class="opacity-50" />
-				<input
-					class="input"
-					type="search"
-					bind:value={input}
-					placeholder="type your secretpath here..."
-				/>
+				<div class="relative">
+					<input
+						class="input pr-10"
+						type="search"
+						bind:value={input}
+						placeholder="type your secretpath here..."
+						aria-label="Secret path lookup"
+					/>
+					{#if input}
+						<button
+							type="button"
+							class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-sm variant-ghost-surface"
+							on:click={clearInput}
+							aria-label="Clear"
+						>
+							×
+						</button>
+					{/if}
+				</div>
 				<hr class="opacity-50" />
-				<div class="mt-2 ml-2">
-					{#if policies === undefined}
+				<div class="mt-2 ml-2 min-h-[2rem]">
+					{#if loading}
+						<p class="opacity-60">Looking up…</p>
+					{:else if error}
+						<p class="text-error-500">Failed to look up: {error}</p>
+					{:else if input && policies === undefined}
 						<p>Lookup your secretpath to see which policies can access it.</p>
-					{:else if policies.length === 0}
+					{:else if policies && policies.length === 0}
 						<p>Looks like no policies have access to this secret.</p>
-					{:else}
+					{:else if policies && policies.length > 0}
 						<p>The following policies can access this secret:</p>
-						<ul>
+						<ul class="list-disc ml-5">
 							{#each policies as policy (policy)}
 								<li>{policy}</li>
 							{/each}
 						</ul>
+					{:else}
+						<p>Lookup your secretpath to see which policies can access it.</p>
 					{/if}
 				</div>
 			</div>
@@ -78,3 +125,4 @@
 		</div>
 	</div>
 </div>
+EOF echo done

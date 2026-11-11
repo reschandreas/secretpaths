@@ -8,9 +8,9 @@
 	let parts = splitPath.length;
 </script>
 
-<div class="card card-hover">
-	<header class="card-header mt-2 h4">{name}</header>
-	<section class="mt-2 ml-4 mr-4 min-h-20 max-h-20">
+<div class="card card-hover" title={secret.path.path}>
+	<header class="card-header mt-2 h4 line-clamp-1">{name}</header>
+	<section class="mt-2 ml-4 mr-4 min-h-20 max-h-20 overflow-hidden">
 		<ol class="breadcrumb mt-1 flex-wrap">
 			{#each splitPath as crumb, index (index)}
 				{#if crumb === ''}

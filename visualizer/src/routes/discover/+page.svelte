@@ -68,6 +68,16 @@
 		<div class="flex flex-col">
 			<h2 class="h2 mt-2 font-thin">check out your secretpaths</h2>
 		</div>
-		<SubwayChart data={paths} {information} />
+		{#if (data.graph?.children?.length ?? 0) === 0}
+			<div class="card p-8 text-center opacity-70 max-w-xl mx-auto mt-10">
+				<p class="mb-2">No secrets found in this Vault.</p>
+				<p class="text-sm">
+					Make sure <code>VAULT_KV_ENGINE</code> points at a populated engine and the
+					<code>secretpaths</code> policy can list it.
+				</p>
+			</div>
+		{:else}
+			<SubwayChart data={paths} {information} />
+		{/if}
 	</div>
 </div>

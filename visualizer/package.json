@@ -11,11 +11,14 @@
 		"lint": "prettier --check . && eslint .",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"test:e2e": "playwright test",
+		"test:e2e:update": "playwright test --update-snapshots",
 		"lint-fix": "prettier --check . --write && eslint .",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@playwright/test": "^1.65.0",
 		"@skeletonlabs/skeleton": "2.11.0",
 		"@skeletonlabs/tw-plugin": "0.4.1",
 		"@sveltejs/adapter-auto": "^7.0.0",

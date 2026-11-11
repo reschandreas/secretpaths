@@ -35,6 +35,41 @@ jobs:
         working-directory: ./server
         run: go test ./...
 
+  visualizer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: ./visualizer
+        run: npm ci
+
+      - name: Svelte check
+        working-directory: ./visualizer
+        run: npm run check
+
+      - name: Lint
+        working-directory: ./visualizer
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: ./visualizer
+        run: npm test
+
+      - name: Install Playwright
+        working-directory: ./visualizer
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        working-directory: ./visualizer
+        run: npm run test:e2e
+
   build-and-push-image:
     runs-on: ubuntu-latest
     strategy:

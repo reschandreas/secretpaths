@@ -23,22 +23,25 @@ import (
 
 func getPolicies(c *gin.Context) {
 	cache := c.MustGet("cache").(otter.Cache[string, any])
-	if cache.Has("policies") {
-		var policies, _ = cache.Get("policies")
-		c.IndentedJSON(http.StatusOK, policies)
-	} else {
-		ctx := context.Background()
-		client, err := backend.AutoAuth(ctx)
-		if err != nil {
-			log.Printf("error: %v", err)
-		}
-		policies, err := GetPolicies(ctx, client)
-		if err != nil {
-			log.Println(err)
-		}
-		cache.Set("policies", policies)
-		c.IndentedJSON(http.StatusOK, policies)
+	if cached, ok := cache.Get("policies"); ok {
+		c.IndentedJSON(http.StatusOK, cached)
+		return
 	}
+	ctx := context.Background()
+	client, err := backend.AutoAuth(ctx)
+	if err != nil {
+		log.Printf("error: %v", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+		return
+	}
+	policies, err := GetPolicies(ctx, client)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	cache.Set("policies", policies)
+	c.IndentedJSON(http.StatusOK, policies)
 }
 
 func healthz(c *gin.Context) {
@@ -88,10 +91,14 @@ func getPaths(c *gin.Context) {
 		client, err := backend.AutoAuth(ctx)
 		if err != nil {
 			log.Printf("error: %v", err)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
 		}
 		paths, err := GetPaths(ctx, client)
 		if err != nil {
 			log.Println(err)
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
 		}
 		all = paths
 		cache.Set("paths", all)
@@ -122,10 +129,14 @@ func compressedGraphLevel(c *gin.Context) {
 	client, err := backend.AutoAuth(ctx)
 	if err != nil {
 		log.Printf("error: %v", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+		return
 	}
 	paths, err := getGraphPaths(ctx, client, l)
 	if err != nil {
 		log.Println(err)
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
 	}
 
 	root := models.CompressedGraphEntry{
@@ -196,11 +207,12 @@ func getCompressedGraph(ctx context.Context, client *vault.Client) (models.Compr
 
 func compressedGraph(c *gin.Context) {
 	ctx := context.Background()
-	client, err := backend.AutoAuth(ctx)
 	cache := c.MustGet("cache").(otter.Cache[string, any])
-
+	client, err := backend.AutoAuth(ctx)
 	if err != nil {
 		log.Printf("error: %v", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+		return
 	}
 
 	if cache.Has("compressed-graph") {
@@ -324,7 +336,12 @@ func getAnnotatedSecrets(c *gin.Context) {
 	if cached, ok := cache.Get("annotatedSecrets"); ok {
 		all = cached.([]models.AnnotatedSecret)
 	} else {
-		response, _ := annotateSecrets(context.Background(), cache)
+		response, err := annotateSecrets(context.Background(), cache)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
 		all = response
 		cache.Set("annotatedSecrets", all)
 	}
