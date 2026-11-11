@@ -21,21 +21,36 @@ autoscaling:
   maxReplicas: 20
   targetCPUUtilizationPercentage: 80
 
-ingress:
-  enabled: true
+gateway:
+  enabled: false
   className: ""
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: Prefix
-          port: 8080
-          name: frontend
-        - path: /v1
-          pathType: Prefix
-          port: 8081
-          name: backend
-  tls: []
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: secretpaths-gateway
+  hostnames:
+    - chart-example.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1
+      backendRefs:
+        - port: 8081
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - port: 8080
 
 
 service:
@@ -55,5 +70,5 @@ livenessProbe:
     port: http-server
 readinessProbe:
   httpGet:
-    path: /v1/healthz
+    path: /v1/readyz
     port: http-server

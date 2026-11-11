@@ -1,0 +1,31 @@
+{{- if .Values.httpRoute.enabled }}
+{{- $fullName := include "secretpaths.fullname" . -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "secretpaths.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    {{- range .Values.httpRoute.parentRefs }}
+    - name: {{ .name | default (printf "%s-gateway" $fullName) }}
+      {{- if .namespace }}namespace: {{ .namespace }}{{- end }}
+    {{- end }}
+  {{- if .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- range .Values.httpRoute.hostnames }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.httpRoute.rules }}
+    - matches:
+        {{- toYaml .matches | nindent 8 }}
+      backendRefs:
+        {{- range .backendRefs }}
+        - name: {{ .name | default $fullName }}
+          port: {{ .port }}
+        {{- end }}
+    {{- end }}
+{{- end }}
