@@ -6,13 +6,16 @@ toolchain go1.27.4
 
 require (
 	github.com/gin-contrib/cors v1.7.9
+	github.com/gin-contrib/gzip v1.2.10
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/hashicorp/vault-client-go v0.4.3
 	github.com/maypok86/otter v1.2.4
+	github.com/maypok86/otter/v2 v2.4.0
 	github.com/tjarratt/babble v0.0.0-20210505082055-cbca2a4833c1
+	golang.org/x/sync v0.24.0
 )
 
 require (
@@ -26,7 +29,6 @@ require (
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
-	github.com/gin-contrib/gzip v1.2.10 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -62,7 +64,6 @@ require (
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
